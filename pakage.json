@@ -1,0 +1,14 @@
+{
+    "name": "logic-league",
+    "version": "1.0.0",
+    "description": "Logic League - Inter-College Puzzle Event Website",
+    "main": "index.html",
+    "scripts": {
+      "start": "serve"
+    },
+    "author": "",
+    "license": "MIT",
+    "dependencies": {
+      "serve": "^14.2.0"
+    }
+  }
