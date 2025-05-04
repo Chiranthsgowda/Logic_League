@@ -37,36 +37,37 @@
       <a href="login.html" class="login-btn">Login</a>
     </div>
   </nav>
-
+  <main>
   <!-- Standings Section -->
   <section class="floating-box" style="padding: 4rem 2rem;">
     <h2 class="text-4xl font-bold glow mb-6">Current Standings</h2>
     <p class="mb-6">Below are the current standings for all teams participating in the Logic League competition.</p>
-    
+
     <div class="overflow-x-auto">
       <table id="standingsTable" class="standings-table">
         <thead>
           <tr>
-            <th>Rank</th>
-            <th>Team Name</th>
-            <th>College</th>
-            <th>Round 1</th>
-            <th>Round 2</th>
-            <th>Round 3</th>
-            <th>Round 4</th>
-            <th>Total</th>
+            <th class="text-4xl font-bold glow">Rank</th>
+            <th class="text-4xl font-bold glow">Team Name</th>
+            <th class="text-4xl font-bold glow">College Name</th>
+            <th class="text-4xl font-bold glow">Round 1</th>
+            <th class="text-4xl font-bold glow">Round 2</th>
+            <th class="text-4xl font-bold glow">Round 3</th>
+            <th class="text-4xl font-bold glow">Round 4</th>
+            <th class="text-4xl font-bold glow">Total</th>
           </tr>
         </thead>
         <tbody>
-          <!-- Table rows will be populated by JavaScript -->
+          <!-- Standings will be populated by JavaScript -->
         </tbody>
       </table>
     </div>
-    
+
     <div class="mt-8">
       <a href="index.html" class="px-6 py-3 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full text-white font-bold hover:shadow-xl transition-all">Back to Home</a>
     </div>
   </section>
+</main>
 
   <footer class="text-center text-sm p-4 text-gray-400">&copy; 2025 Logic League. All rights reserved.</footer>
 
