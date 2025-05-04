@@ -62,37 +62,46 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // Admin Authentication
+// Update adminLogin function in script.js
 function adminLogin(event) {
   event.preventDefault();
   const username = document.getElementById('username').value;
   const password = document.getElementById('password').value;
 
-  const adminUsername = 'admin';
-  const adminPassword = 'logicleague2025';
-
-  if (username === adminUsername && password === adminPassword) {
+  // First check if it's the admin account
+  if (username === 'admin' && password === 'logicleague2025') {
     sessionStorage.setItem('adminAuthenticated', 'true');
     window.location.href = 'admin.html';
-  } else {
-    // Check Firebase for user accounts
-    firebase.database().ref('users').orderByChild('username').equalTo(username).once('value')
-      .then((snapshot) => {
-        if (snapshot.exists()) {
-          const userData = Object.values(snapshot.val())[0];
-          if (userData.password === password) {
-            alert(`Welcome, ${userData.username} from ${userData.college}`);
-          } else {
-            alert('Invalid password');
-          }
-        } else {
-          alert('Invalid username or password');
-        }
-      })
-      .catch((error) => {
-        console.error("Error checking login:", error);
-        alert('Error during login. Please try again.');
-      });
+    return;
   }
+
+  // Otherwise check Firebase Authentication
+  firebase.auth().signInWithEmailAndPassword(username, password)
+    .then((userCredential) => {
+      // Signed in
+      sessionStorage.setItem('adminAuthenticated', 'true');
+      window.location.href = 'admin.html';
+    })
+    .catch((error) => {
+      // If email/password auth fails, check the custom user database
+      firebase.database().ref('users').orderByChild('username').equalTo(username).once('value')
+        .then((snapshot) => {
+          if (snapshot.exists()) {
+            const userData = Object.values(snapshot.val())[0];
+            if (userData.password === password) {
+              alert(`Welcome, ${userData.username} from ${userData.college}`);
+            } else {
+              alert('Invalid password');
+            }
+          } else {
+            alert('Invalid username or password');
+          }
+        })
+        .catch((error) => {
+          console.error("Error checking login:", error);
+          alert('Error during login. Please try again.');
+        });
+    });
 }
 
 // Check if admin is logged in
