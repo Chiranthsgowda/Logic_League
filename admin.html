@@ -9,7 +9,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 
-<body class="relative" onload="initializeAdminPanel()">
+<body id="admin-body" class="relative" onload="initializeAdminPanel()">
   <!-- Floating Icons -->
   <div class="icon-bg">
     <i class="fas fa-code"></i>
@@ -30,43 +30,29 @@
     <div class="space-x-6 nav-links">
       <a href="index.html">View Website</a>
       <a href="standings.html">View Standings</a>
-      <button onclick="adminLogout()" class="login-btn">Logout</button>
+      <button onclick="adminLogout()" class="login-btn" type="button">Logout</button>
     </div>
   </nav>
 
+  <main>
   <!-- Admin Panel -->
-  <div class="admin-panel">
-    <h2 class="text-3xl font-bold glow mb-6">Organizer Control Panel</h2>
+  <div class="admin-panel p-6 bg-[#2c2b3f] rounded-xl shadow-lg">
+    <h2 class="text-3xl font-bold glow mb-6 text-center text-white">Organizer Control Panel</h2>
+
     
-    <!-- Add Teams Section -->
-    <div id="addTeamsSection">
+
+    <!-- Scoring Section -->
+    <div id="scoringSection" style="display: none;" class="mb-6">
       <div class="actions-bar mb-4">
-        <h3 class="text-xl font-semibold">Add Teams</h3>
-        <button onclick="addTeam()"><i class="fas fa-plus mr-2"></i>Add Team</button>
-      </div>
-      
-      <div id="teamsList" class="mb-6">
-        <div class="team-input-row">
-          <input type="text" placeholder="Team Name" class="team-name">
-          <input type="text" placeholder="College" class="team-college">
-        </div>
-      </div>
-      
-      <button onclick="finalizeTeams()" class="w-full">Finalize Teams</button>
-    </div>
-    
-    <!-- Scoring Section (initially hidden) -->
-    <div id="scoringSection" style="display: none;">
-      <div class="actions-bar mb-4">
-        <h3 class="text-xl font-semibold">Update Scores</h3>
+        <h3 class="text-xl font-semibold text-white">Update Scores</h3>
         <div>
-          <button onclick="saveScores()"><i class="fas fa-save mr-2"></i>Save Scores</button>
-          <button onclick="window.location.href='standings.html'" class="ml-2">View Standings</button>
+          <button onclick="saveScores()" class="save-btn"><i class="fas fa-save mr-2"></i>Save Scores</button>
+          <button onclick="window.location.href='standings.html'" class="ml-2 view-standings-btn">View Standings</button>
         </div>
       </div>
-      
+
       <div class="mb-4">
-        <div class="team-scores-row font-bold">
+        <div class="team-scores-row font-bold text-white">
           <div style="flex: 1;">Team</div>
           <div style="width: 60px;">Round 1</div>
           <div style="width: 60px;">Round 2</div>
@@ -75,14 +61,33 @@
           <div style="width: 60px;">Total</div>
         </div>
       </div>
-      
+
       <div id="scoringForm">
-        <!-- Team scoring rows will be generated here -->
+        <!-- Score rows will be populated dynamically -->
       </div>
     </div>
   </div>
+  <!-- Add Teams Section -->
+<div id="addTeamsSection" class="mb-6">
+  <div class="actions-bar mb-4">
+    <h3 class="text-xl font-semibold text-white">Add Teams</h3>
+    <button onclick="addTeam()" class="add-btn"><i class="fas fa-plus mr-2"></i>Add Team</button>
+  </div>
 
-  <footer class="text-center text-sm p-4 text-gray-400">&copy; 2025 Logic League. All rights reserved.</footer>
+  <div id="teamsList" class="mb-6">
+    <div class="team-input-row">
+      <input type="text" placeholder="Team Name" class="team-name">
+      <input type="text" placeholder="College" class="team-college">
+    </div>
+  </div>
+
+  <button onclick="finalizeTeams()" class="finalize-btn">Finalize Teams</button>
+</div>
+</main>
+
+  <footer class="text-center text-sm p-4 text-gray-400 bg-[#1f1b2e] mt-4 rounded-t-xl">
+    &copy; 2025 Logic League. All rights reserved.
+  </footer>
 
   <script src="script.js"></script>
 </body>
