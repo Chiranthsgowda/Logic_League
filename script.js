@@ -1,7 +1,24 @@
 // Script for the Logic League website
 
-// Initialize random positions for floating icons
-document.addEventListener('DOMContentLoaded', function () {
+// Firebase Configuration
+// Add this to the top of your script.js
+document.addEventListener('DOMContentLoaded', function() {
+  // Initialize Firebase
+  const firebaseConfig = {
+    apiKey: "YOUR_API_KEY", // You'll replace these with your actual Firebase credentials
+    authDomain: "logic-league.firebaseapp.com",
+    databaseURL: "https://logic-league-default-rtdb.firebaseio.com",
+    projectId: "logic-league",
+    storageBucket: "logic-league.appspot.com",
+    messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+    appId: "YOUR_APP_ID"
+  };
+
+  // Initialize Firebase
+  firebase.initializeApp(firebaseConfig);
+  const database = firebase.database();
+
+  // Initialize random positions for floating icons
   const icons = document.querySelectorAll(".icon-bg i");
   const windowWidth = window.innerWidth;
   const windowHeight = window.innerHeight;
@@ -54,16 +71,33 @@ function adminLogin(event) {
   const adminPassword = 'logicleague2025';
 
   if (username === adminUsername && password === adminPassword) {
-    localStorage.setItem('adminAuthenticated', 'true');
+    sessionStorage.setItem('adminAuthenticated', 'true');
     window.location.href = 'admin.html';
   } else {
-    alert('Invalid username or password');
+    // Check Firebase for user accounts
+    firebase.database().ref('users').orderByChild('username').equalTo(username).once('value')
+      .then((snapshot) => {
+        if (snapshot.exists()) {
+          const userData = Object.values(snapshot.val())[0];
+          if (userData.password === password) {
+            alert(`Welcome, ${userData.username} from ${userData.college}`);
+          } else {
+            alert('Invalid password');
+          }
+        } else {
+          alert('Invalid username or password');
+        }
+      })
+      .catch((error) => {
+        console.error("Error checking login:", error);
+        alert('Error during login. Please try again.');
+      });
   }
 }
 
 // Check if admin is logged in
 function checkAdminAuth() {
-  const isAuthenticated = localStorage.getItem('adminAuthenticated') === 'true';
+  const isAuthenticated = sessionStorage.getItem('adminAuthenticated') === 'true';
   if (!isAuthenticated && window.location.pathname.includes('admin.html')) {
     window.location.href = 'login.html';
   }
@@ -71,8 +105,31 @@ function checkAdminAuth() {
 
 // Admin logout
 function adminLogout() {
-  localStorage.removeItem('adminAuthenticated');
+  sessionStorage.removeItem('adminAuthenticated');
   window.location.href = 'login.html';
+}
+
+// Initialize admin panel if on admin page
+function initializeAdminPanel() {
+  checkAdminAuth();
+  
+  // Get teams from Firebase
+  firebase.database().ref('teams').once('value')
+    .then((snapshot) => {
+      if (snapshot.exists()) {
+        // Teams already exist, show scoring section
+        document.getElementById('addTeamsSection').style.display = 'none';
+        document.getElementById('scoringSection').style.display = 'block';
+        generateScoringForm();
+      } else {
+        // No teams yet, show add teams section
+        document.getElementById('addTeamsSection').style.display = 'block';
+        document.getElementById('scoringSection').style.display = 'none';
+      }
+    })
+    .catch((error) => {
+      console.error("Error loading teams:", error);
+    });
 }
 
 // Add team in admin panel
@@ -111,37 +168,52 @@ function finalizeTeams() {
     return;
   }
 
-  localStorage.setItem('teams', JSON.stringify(teams));
-  document.getElementById('addTeamsSection').style.display = 'none';
-  document.getElementById('scoringSection').style.display = 'block';
-
-  generateScoringForm();
+  // Save teams to Firebase
+  const teamsRef = firebase.database().ref('teams');
+  teamsRef.set(teams)
+    .then(() => {
+      document.getElementById('addTeamsSection').style.display = 'none';
+      document.getElementById('scoringSection').style.display = 'block';
+      generateScoringForm();
+    })
+    .catch((error) => {
+      console.error("Error saving teams:", error);
+      alert('Error saving teams. Please try again.');
+    });
 }
 
 // Generate scoring form based on saved teams
 function generateScoringForm() {
-  const teams = JSON.parse(localStorage.getItem('teams') || '[]');
-  const scoringForm = document.getElementById('scoringForm');
-  scoringForm.innerHTML = '';
+  firebase.database().ref('teams').once('value')
+    .then((snapshot) => {
+      if (snapshot.exists()) {
+        const teams = snapshot.val();
+        const scoringForm = document.getElementById('scoringForm');
+        scoringForm.innerHTML = '';
 
-  teams.forEach((team, index) => {
-    const teamScoreRow = document.createElement('div');
-    teamScoreRow.className = 'team-scores-row';
-    teamScoreRow.innerHTML = `
-      <div style="flex: 1;">${team.name} (${team.college})</div>
-      <input type="number" data-team="${index}" data-round="0" value="${team.scores[0]}" min="0" class="score-input">
-      <input type="number" data-team="${index}" data-round="1" value="${team.scores[1]}" min="0" class="score-input">
-      <input type="number" data-team="${index}" data-round="2" value="${team.scores[2]}" min="0" class="score-input">
-      <input type="number" data-team="${index}" data-round="3" value="${team.scores[3]}" min="0" class="score-input">
-      <div class="total-score">${team.total}</div>
-    `;
-    scoringForm.appendChild(teamScoreRow);
-  });
+        teams.forEach((team, index) => {
+          const teamScoreRow = document.createElement('div');
+          teamScoreRow.className = 'team-scores-row';
+          teamScoreRow.innerHTML = `
+            <div style="flex: 1;">${team.name} (${team.college})</div>
+            <input type="number" data-team="${index}" data-round="0" value="${team.scores[0]}" min="0" class="score-input">
+            <input type="number" data-team="${index}" data-round="1" value="${team.scores[1]}" min="0" class="score-input">
+            <input type="number" data-team="${index}" data-round="2" value="${team.scores[2]}" min="0" class="score-input">
+            <input type="number" data-team="${index}" data-round="3" value="${team.scores[3]}" min="0" class="score-input">
+            <div class="total-score">${team.total}</div>
+          `;
+          scoringForm.appendChild(teamScoreRow);
+        });
 
-  const scoreInputs = document.querySelectorAll('.score-input');
-  scoreInputs.forEach(input => {
-    input.addEventListener('change', updateScores);
-  });
+        const scoreInputs = document.querySelectorAll('.score-input');
+        scoreInputs.forEach(input => {
+          input.addEventListener('change', updateScores);
+        });
+      }
+    })
+    .catch((error) => {
+      console.error("Error generating scoring form:", error);
+    });
 }
 
 // Update scores when score inputs change
@@ -150,15 +222,26 @@ function updateScores(event) {
   const roundIndex = parseInt(event.target.dataset.round);
   const score = parseInt(event.target.value) || 0;
 
-  const teams = JSON.parse(localStorage.getItem('teams') || '[]');
-  teams[teamIndex].scores[roundIndex] = score;
-  teams[teamIndex].total = teams[teamIndex].scores.reduce((sum, score) => sum + score, 0);
+  // Get current teams from Firebase
+  firebase.database().ref('teams').once('value')
+    .then((snapshot) => {
+      if (snapshot.exists()) {
+        const teams = snapshot.val();
+        teams[teamIndex].scores[roundIndex] = score;
+        teams[teamIndex].total = teams[teamIndex].scores.reduce((sum, score) => sum + score, 0);
 
-  const teamScoreRow = event.target.closest('.team-scores-row');
-  const totalScoreElement = teamScoreRow.querySelector('.total-score');
-  totalScoreElement.textContent = teams[teamIndex].total;
+        // Update the total score in the UI
+        const teamScoreRow = event.target.closest('.team-scores-row');
+        const totalScoreElement = teamScoreRow.querySelector('.total-score');
+        totalScoreElement.textContent = teams[teamIndex].total;
 
-  localStorage.setItem('teams', JSON.stringify(teams));
+        // Save the updated team back to Firebase
+        firebase.database().ref('teams').set(teams);
+      }
+    })
+    .catch((error) => {
+      console.error("Error updating scores:", error);
+    });
 }
 
 // Save all scores
@@ -170,26 +253,40 @@ function saveScores() {
 function loadStandingsData() {
   const standingsTable = document.getElementById('standingsTable');
   if (standingsTable) {
-    const teams = JSON.parse(localStorage.getItem('teams') || '[]');
-    teams.sort((a, b) => b.total - a.total);
+    // Get teams from Firebase
+    firebase.database().ref('teams').once('value')
+      .then((snapshot) => {
+        if (snapshot.exists()) {
+          const teams = snapshot.val();
+          // Sort teams by total score
+          teams.sort((a, b) => b.total - a.total);
 
-    const tbody = standingsTable.querySelector('tbody');
-    tbody.innerHTML = '';
+          const tbody = standingsTable.querySelector('tbody');
+          tbody.innerHTML = '';
 
-    teams.forEach((team, index) => {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td>${index + 1}</td>
-        <td>${team.name}</td>
-        <td>${team.college}</td>
-        <td>${team.scores[0]}</td>
-        <td>${team.scores[1]}</td>
-        <td>${team.scores[2]}</td>
-        <td>${team.scores[3]}</td>
-        <td class="font-bold">${team.total}</td>
-      `;
-      tbody.appendChild(tr);
-    });
+          teams.forEach((team, index) => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+              <td>${index + 1}</td>
+              <td>${team.name}</td>
+              <td>${team.college}</td>
+              <td>${team.scores[0]}</td>
+              <td>${team.scores[1]}</td>
+              <td>${team.scores[2]}</td>
+              <td>${team.scores[3]}</td>
+              <td class="font-bold">${team.total}</td>
+            `;
+            tbody.appendChild(tr);
+          });
+        } else {
+          // No teams yet
+          const tbody = standingsTable.querySelector('tbody');
+          tbody.innerHTML = '<tr><td colspan="8">No teams registered yet</td></tr>';
+        }
+      })
+      .catch((error) => {
+        console.error("Error loading standings:", error);
+      });
   }
 }
 
@@ -223,22 +320,31 @@ function showRemoveTeamsModal() {
     document.body.appendChild(modalOverlay);
   }
 
-  const teams = JSON.parse(localStorage.getItem('teams') || '[]');
-  const removeTeamsList = document.getElementById('removeTeamsList');
-  removeTeamsList.innerHTML = '';
+  // Get teams from Firebase
+  firebase.database().ref('teams').once('value')
+    .then((snapshot) => {
+      if (snapshot.exists()) {
+        const teams = snapshot.val();
+        const removeTeamsList = document.getElementById('removeTeamsList');
+        removeTeamsList.innerHTML = '';
 
-  teams.forEach((team, index) => {
-    const teamItem = document.createElement('div');
-    teamItem.innerHTML = `
-      <label>
-        <input type="checkbox" value="${index}">
-        ${team.name} (${team.college})
-      </label>
-    `;
-    removeTeamsList.appendChild(teamItem);
-  });
+        teams.forEach((team, index) => {
+          const teamItem = document.createElement('div');
+          teamItem.innerHTML = `
+            <label>
+              <input type="checkbox" value="${index}">
+              ${team.name} (${team.college})
+            </label>
+          `;
+          removeTeamsList.appendChild(teamItem);
+        });
 
-  modalOverlay.style.display = 'flex';
+        modalOverlay.style.display = 'flex';
+      }
+    })
+    .catch((error) => {
+      console.error("Error loading teams for removal:", error);
+    });
 }
 
 // Close team removal modal
@@ -252,76 +358,82 @@ function removeSelectedTeams() {
   const checkboxes = document.querySelectorAll('#removeTeamsList input[type="checkbox"]:checked');
   const selectedIndexes = Array.from(checkboxes).map(cb => parseInt(cb.value));
 
-  let teams = JSON.parse(localStorage.getItem('teams') || '[]');
-  teams = teams.filter((_, index) => !selectedIndexes.includes(index));
+  // Get current teams from Firebase
+  firebase.database().ref('teams').once('value')
+    .then((snapshot) => {
+      if (snapshot.exists()) {
+        let teams = snapshot.val();
+        teams = teams.filter((_, index) => !selectedIndexes.includes(index));
 
-  localStorage.setItem('teams', JSON.stringify(teams));
-
-  closeRemoveTeamsModal();
-  alert('Selected teams have been removed.');
-  location.reload();
+        // Save updated teams to Firebase
+        firebase.database().ref('teams').set(teams)
+          .then(() => {
+            closeRemoveTeamsModal();
+            alert('Selected teams have been removed.');
+            location.reload();
+          })
+          .catch((error) => {
+            console.error("Error removing teams:", error);
+            alert('Error removing teams. Please try again.');
+          });
+      }
+    })
+    .catch((error) => {
+      console.error("Error getting teams for removal:", error);
+    });
 }
 
-
 function showRegisterModal() {
-document.getElementById('registerModal').classList.remove('hidden');
+  document.getElementById('registerModal').classList.remove('hidden');
 }
 
 function closeRegisterModal() {
-document.getElementById('registerModal').classList.add('hidden');
+  document.getElementById('registerModal').classList.add('hidden');
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-const registerForm = document.getElementById('registerForm');
-if (registerForm) {
-  registerForm.addEventListener('submit', function (e) {
-    e.preventDefault();
+  const registerForm = document.getElementById('registerForm');
+  if (registerForm) {
+    registerForm.addEventListener('submit', function (e) {
+      e.preventDefault();
 
-    const regUsername = document.getElementById('regUsername').value;
-    const regPassword = document.getElementById('regPassword').value;
-    const regCollege = document.getElementById('regCollege').value;
+      const regUsername = document.getElementById('regUsername').value;
+      const regPassword = document.getElementById('regPassword').value;
+      const regCollege = document.getElementById('regCollege').value;
 
-    if (!regUsername || !regPassword || !regCollege) {
-      alert('Please fill in all fields.');
-      return;
-    }
+      if (!regUsername || !regPassword || !regCollege) {
+        alert('Please fill in all fields.');
+        return;
+      }
 
-    const users = JSON.parse(localStorage.getItem('users') || '[]');
-
-    const userExists = users.some(user => user.username === regUsername);
-    if (userExists) {
-      alert('Username already exists. Choose another.');
-      return;
-    }
-
-    users.push({ username: regUsername, password: regPassword, college: regCollege });
-    localStorage.setItem('users', JSON.stringify(users));
-
-    alert('Registration successful! You can now log in.');
-    closeRegisterModal();
-  });
-}
-});
-
-function adminLogin(event) {
-event.preventDefault();
-const username = document.getElementById('username').value;
-const password = document.getElementById('password').value;
-
-const adminUsername = 'admin';
-const adminPassword = 'logicleague2025';
-
-if (username === adminUsername && password === adminPassword) {
-  localStorage.setItem('adminAuthenticated', 'true');
-  window.location.href = 'admin.html';
-} else {
-  const users = JSON.parse(localStorage.getItem('users') || '[]');
-  const user = users.find(u => u.username === username && u.password === password);
-  if (user) {
-    alert(`Welcome, ${user.username} from ${user.college}`);
-  } else {
-    alert('Invalid username or password');
+      // Check if username already exists
+      firebase.database().ref('users').orderByChild('username').equalTo(regUsername).once('value')
+        .then((snapshot) => {
+          if (snapshot.exists()) {
+            alert('Username already exists. Choose another.');
+          } else {
+            // Add new user to Firebase
+            const newUser = {
+              username: regUsername,
+              password: regPassword,
+              college: regCollege
+            };
+            
+            firebase.database().ref('users').push(newUser)
+              .then(() => {
+                alert('Registration successful! You can now log in.');
+                closeRegisterModal();
+              })
+              .catch((error) => {
+                console.error("Error registering user:", error);
+                alert('Error during registration. Please try again.');
+              });
+          }
+        })
+        .catch((error) => {
+          console.error("Error checking username:", error);
+          alert('Error checking username. Please try again.');
+        });
+    });
   }
-}
-}
-
+});
