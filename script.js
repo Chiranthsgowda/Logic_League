@@ -4,19 +4,23 @@
 // Add this to the top of your script.js
 document.addEventListener('DOMContentLoaded', function() {
   // Initialize Firebase
-  const firebaseConfig = {
-    apiKey: "YOUR_API_KEY", // You'll replace these with your actual Firebase credentials
-    authDomain: "logic-league.firebaseapp.com",
-    databaseURL: "https://logic-league-default-rtdb.firebaseio.com",
-    projectId: "logic-league",
-    storageBucket: "logic-league.appspot.com",
-    messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-    appId: "YOUR_APP_ID"
-  };
+  // Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
 
-  // Initialize Firebase
-  firebase.initializeApp(firebaseConfig);
-  const database = firebase.database();
+// Your web app's Firebase configuration
+const firebaseConfig = {
+  apiKey: "AIzaSyC1kYLP4GbVbtXYxq4nwQgKLsK1-q9kO-k",
+  authDomain: "logic-league.firebaseapp.com",
+  projectId: "logic-league",
+  storageBucket: "logic-league.firebasestorage.app",
+  messagingSenderId: "352937903231",
+  appId: "1:352937903231:web:02fede5b8d3de8d0a5ab4a"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
 
   // Initialize random positions for floating icons
   const icons = document.querySelectorAll(".icon-bg i");
