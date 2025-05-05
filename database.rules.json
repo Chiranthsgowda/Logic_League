@@ -1,14 +1,10 @@
 {
   "rules": {
-    ".read": "auth != null",
+    ".read": true,
     ".write": "auth != null",
     "teams": {
       ".read": true,
-      ".write": "auth != null"
-    },
-    "users": {
-      ".read": false,
-      ".write": true
+      ".write": "auth != null || (!data.exists() && !newData.exists())"
     }
   }
 }
