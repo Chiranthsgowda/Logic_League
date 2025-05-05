@@ -91,21 +91,7 @@ if (typeof firebase.auth === 'undefined') {
   document.write('<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>');
 }
 
-// Sign in anonymously to Firebase for admin operations
-function signInAnonymously() {
-  return new Promise((resolve, reject) => {
-    firebase.auth().signInAnonymously()
-      .then((userCredential) => {
-        console.log("Signed in anonymously");
-        resolve(userCredential.user);
-      })
-      .catch((error) => {
-        console.error("Anonymous auth error:", error);
-        reject(error);
-      });
-  });
-}
-
+// UPDATED: Use email/password authentication instead of anonymous
 function adminLogin(event) {
   event.preventDefault();
   const username = document.getElementById('username').value;
@@ -117,14 +103,34 @@ function adminLogin(event) {
   if (username === 'admin' && password === 'logicleague2025') {
     console.log("Admin credentials match"); // Debug
     
-    // Sign in anonymously to Firebase
-    signInAnonymously()
-      .then(() => {
+    // Use email/password authentication instead of anonymous
+    // We'll use a predefined admin email with the password
+    const adminEmail = "admin@logicleague.com";
+    
+    firebase.auth().signInWithEmailAndPassword(adminEmail, password)
+      .then((userCredential) => {
+        console.log("Firebase auth successful");
         sessionStorage.setItem('adminAuthenticated', 'true');
         window.location.href = 'admin.html';
       })
       .catch((error) => {
-        alert('Error authenticating with Firebase: ' + error.message);
+        console.error("Firebase auth error:", error);
+        
+        // If the user doesn't exist yet, create it first
+        if (error.code === 'auth/user-not-found') {
+          firebase.auth().createUserWithEmailAndPassword(adminEmail, password)
+            .then((userCredential) => {
+              console.log("Admin user created");
+              sessionStorage.setItem('adminAuthenticated', 'true');
+              window.location.href = 'admin.html';
+            })
+            .catch((createError) => {
+              console.error("Error creating admin user:", createError);
+              alert("Authentication error: " + createError.message);
+            });
+        } else {
+          alert("Authentication error: " + error.message);
+        }
       });
   } else {
     alert('Invalid username or password. Only admin can login.');
@@ -141,18 +147,15 @@ function checkAdminAuth() {
     return;
   }
   
-  // Make sure Firebase auth is signed in anonymously if we're on admin pages
-  if (isAuthenticated) {
-    firebase.auth().onAuthStateChanged((user) => {
-      if (!user && (window.location.pathname.includes('admin.html') || window.location.pathname.includes('team-management.html'))) {
-        signInAnonymously().catch(error => {
-          console.error("Failed to sign in anonymously:", error);
-          alert("Authentication error. Please log in again.");
-          adminLogout();
-        });
-      }
-    });
-  }
+  // Check Firebase auth status
+  firebase.auth().onAuthStateChanged((user) => {
+    if (!user && isAuthenticated && (window.location.pathname.includes('admin.html') || window.location.pathname.includes('team-management.html'))) {
+      // Session says we're authenticated but Firebase says we're not
+      console.log("Firebase auth state doesn't match session, redirecting to login");
+      sessionStorage.removeItem('adminAuthenticated');
+      window.location.href = 'login.html';
+    }
+  });
   
   // If we're on the team management page, load the teams
   if (window.location.pathname.includes('team-management.html')) {
@@ -234,37 +237,31 @@ function finalizeTeams() {
     return;
   }
 
-  // Make sure we're authenticated
-  ensureFirebaseAuth().then(() => {
-    // Save teams to Firebase
-    const teamsRef = firebase.database().ref('teams');
-    teamsRef.set(teams)
-      .then(() => {
-        document.getElementById('addTeamsSection').style.display = 'none';
-        document.getElementById('scoringSection').style.display = 'block';
-        generateScoringForm();
-      })
-      .catch((error) => {
-        console.error("Error saving teams:", error);
-        alert('Error saving teams. Please try again.');
-      });
-  }).catch(error => {
-    alert('Authentication error: ' + error.message);
-  });
-}
+  // Check if user is authenticated with Firebase
+  if (!firebase.auth().currentUser) {
+    alert('Authentication error: Please log in again');
+    adminLogout(); // Force re-login
+    return;
+  }
 
-// Helper to ensure Firebase auth is active
-function ensureFirebaseAuth() {
-  return new Promise((resolve, reject) => {
-    const user = firebase.auth().currentUser;
-    if (user) {
-      resolve(user);
-    } else {
-      signInAnonymously()
-        .then(user => resolve(user))
-        .catch(error => reject(error));
-    }
-  });
+  // Save teams to Firebase
+  const teamsRef = firebase.database().ref('teams');
+  teamsRef.set(teams)
+    .then(() => {
+      document.getElementById('addTeamsSection').style.display = 'none';
+      document.getElementById('scoringSection').style.display = 'block';
+      generateScoringForm();
+    })
+    .catch((error) => {
+      console.error("Error saving teams:", error);
+      alert('Error saving teams: ' + error.message);
+      
+      // If we get a permission error, redirect to login
+      if (error.code === 'PERMISSION_DENIED') {
+        alert('Permission denied. Please log in again.');
+        adminLogout();
+      }
+    });
 }
 
 // Generate scoring form based on saved teams
@@ -307,35 +304,54 @@ function updateScores(event) {
   const roundIndex = parseInt(event.target.dataset.round);
   const score = parseInt(event.target.value) || 0;
 
-  // Make sure we're authenticated before updating
-  ensureFirebaseAuth().then(() => {
-    // Get current teams from Firebase
-    firebase.database().ref('teams').once('value')
-      .then((snapshot) => {
-        if (snapshot.exists()) {
-          const teams = snapshot.val();
-          teams[teamIndex].scores[roundIndex] = score;
-          teams[teamIndex].total = teams[teamIndex].scores.reduce((sum, score) => sum + score, 0);
+  // Check authentication
+  if (!firebase.auth().currentUser) {
+    alert('Authentication error: Please log in again');
+    adminLogout();
+    return;
+  }
 
-          // Update the total score in the UI
-          const teamScoreRow = event.target.closest('.team-scores-row');
-          const totalScoreElement = teamScoreRow.querySelector('.total-score');
-          totalScoreElement.textContent = teams[teamIndex].total;
+  // Get current teams from Firebase
+  firebase.database().ref('teams').once('value')
+    .then((snapshot) => {
+      if (snapshot.exists()) {
+        const teams = snapshot.val();
+        teams[teamIndex].scores[roundIndex] = score;
+        teams[teamIndex].total = teams[teamIndex].scores.reduce((sum, score) => sum + score, 0);
 
-          // Save the updated team back to Firebase
-          firebase.database().ref('teams').set(teams);
-        }
-      })
-      .catch((error) => {
-        console.error("Error updating scores:", error);
-      });
-  }).catch(error => {
-    alert('Authentication error: ' + error.message);
-  });
+        // Update the total score in the UI
+        const teamScoreRow = event.target.closest('.team-scores-row');
+        const totalScoreElement = teamScoreRow.querySelector('.total-score');
+        totalScoreElement.textContent = teams[teamIndex].total;
+
+        // Save the updated team back to Firebase
+        firebase.database().ref('teams').set(teams)
+          .catch((error) => {
+            console.error("Error updating scores:", error);
+            alert('Error updating scores: ' + error.message);
+            
+            // If we get a permission error, redirect to login
+            if (error.code === 'PERMISSION_DENIED') {
+              alert('Permission denied. Please log in again.');
+              adminLogout();
+            }
+          });
+      }
+    })
+    .catch((error) => {
+      console.error("Error updating scores:", error);
+    });
 }
 
 // Save all scores
 function saveScores() {
+  // Check authentication
+  if (!firebase.auth().currentUser) {
+    alert('Authentication error: Please log in again');
+    adminLogout();
+    return;
+  }
+  
   alert('Scores saved successfully!');
 }
 
@@ -574,54 +590,61 @@ function removeSelectedTeams() {
   // Show password prompt
   showPasswordPrompt(function(isVerified) {
     if (isVerified) {
-      // Ensure Firebase Authentication
-      ensureFirebaseAuth().then(() => {
-        // Now get the indices of teams to remove
-        const indicesToRemove = Array.from(checkedBoxes).map(checkbox => 
-          parseInt(checkbox.getAttribute('data-index'))
-        );
-        
-        console.log("Indices to remove:", indicesToRemove);
-        
-        // Get current teams from Firebase
-        firebase.database().ref('teams').once('value')
-          .then((snapshot) => {
-            if (snapshot.exists()) {
-              const teams = snapshot.val();
-              
-              // Create new array without the selected teams
-              // Sort indices in descending order to remove from end first
-              const sortedIndices = [...indicesToRemove].sort((a, b) => b - a);
-              
-              // Make a copy of the teams array
-              let updatedTeams = [...teams];
-              
-              // Remove teams from the copy, starting from the highest index
-              sortedIndices.forEach(index => {
-                updatedTeams.splice(index, 1);
-              });
-              
-              console.log("Updated teams length:", updatedTeams.length);
-              
-              // Update Firebase
-              return firebase.database().ref('teams').set(updatedTeams);
-            } else {
-              throw new Error("No teams found in database");
-            }
-          })
-          .then(() => {
-            alert('Teams removed successfully!');
-            // Reload the teams table
-            loadTeamsForManagement();
-          })
-          .catch((error) => {
-            console.error("Error removing teams:", error);
-            alert('Error removing teams: ' + error.message);
-          });
-      }).catch(error => {
-        console.error("Auth error during team removal:", error);
-        alert('Authentication error: ' + error.message);
-      });
+      // Check authentication
+      if (!firebase.auth().currentUser) {
+        alert('Authentication error: Please log in again');
+        adminLogout();
+        return;
+      }
+      
+      // Now get the indices of teams to remove
+      const indicesToRemove = Array.from(checkedBoxes).map(checkbox => 
+        parseInt(checkbox.getAttribute('data-index'))
+      );
+      
+      console.log("Indices to remove:", indicesToRemove);
+      
+      // Get current teams from Firebase
+      firebase.database().ref('teams').once('value')
+        .then((snapshot) => {
+          if (snapshot.exists()) {
+            const teams = snapshot.val();
+            
+            // Create new array without the selected teams
+            // Sort indices in descending order to remove from end first
+            const sortedIndices = [...indicesToRemove].sort((a, b) => b - a);
+            
+            // Make a copy of the teams array
+            let updatedTeams = [...teams];
+            
+            // Remove teams from the copy, starting from the highest index
+            sortedIndices.forEach(index => {
+              updatedTeams.splice(index, 1);
+            });
+            
+            console.log("Updated teams length:", updatedTeams.length);
+            
+            // Update Firebase
+            return firebase.database().ref('teams').set(updatedTeams);
+          } else {
+            throw new Error("No teams found in database");
+          }
+        })
+        .then(() => {
+          alert('Teams removed successfully!');
+          // Reload the teams table
+          loadTeamsForManagement();
+        })
+        .catch((error) => {
+          console.error("Error removing teams:", error);
+          alert('Error removing teams: ' + error.message);
+          
+          // If we get a permission error, redirect to login
+          if (error.code === 'PERMISSION_DENIED') {
+            alert('Permission denied. Please log in again.');
+            adminLogout();
+          }
+        });
     }
   });
 }
