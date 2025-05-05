@@ -703,3 +703,67 @@ input[type="checkbox"] {
   color: white;
   margin-bottom: 1rem;
 }
+
+/* Scores Table Styling */
+.scores-table-container {
+  overflow-x: auto;
+  margin-bottom: 20px;
+}
+
+.scores-table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: #2c2b3f;
+  color: #fff;
+  border: 1px solid #555;
+}
+
+.scores-table th,
+.scores-table td {
+  border: 1px solid #777;
+  padding: 12px 16px;
+  text-align: center;
+}
+
+.scores-table th {
+  background-color: #3c3b5f;
+  font-weight: bold;
+  color: #fff4f4;
+}
+
+.scores-table tr:nth-child(even) {
+  background-color: #353453;
+}
+
+.scores-table tr:hover {
+  background-color: #44436a;
+}
+
+.scores-table input.score-input {
+  width: 60px;
+  text-align: center;
+  padding: 8px;
+  border-radius: 4px;
+  border: 1px solid #555;
+  background-color: #333;
+  color: #fff;
+}
+
+.scores-table input.score-input:focus {
+  outline: none;
+  border-color: #3498db;
+  box-shadow: 0 0 5px rgba(52, 152, 219, 0.5);
+}
+
+.scores-table .total-score {
+  font-weight: bold;
+  font-size: 1.1em;
+}
+
+.add-btn {
+  background-color: #2ecc71;
+}
+
+.add-btn:hover {
+  background-color: #27ae60;
+}
