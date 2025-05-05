@@ -10,6 +10,20 @@
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 </head>
 <body class="bg-gradient-to-r from-purple-800 via-blue-700 to-blue-800 text-white">
+  <!-- Floating Icons -->
+  <div class="icon-bg">
+    <i class="fas fa-code"></i>
+    <i class="fas fa-laptop-code"></i>
+    <i class="fas fa-terminal"></i>
+    <i class="fas fa-microchip"></i>
+    <i class="fas fa-brain"></i>
+    <i class="fas fa-cogs"></i>
+    <i class="fas fa-flask"></i>
+    <i class="fas fa-database"></i>
+    <i class="fas fa-puzzle-piece"></i>
+    <i class="fas fa-users"></i>
+  </div>
+
   <div class="min-h-screen flex items-center justify-center">
     <div class="login-container">
       <h1 class="text-3xl font-bold mb-6 text-center glow">Admin Login</h1>
@@ -26,38 +40,15 @@
           <button type="submit" class="submit-btn">Login</button>
         </div>
       </form>
-      <p class="text-center mt-2">
-        Don't have an account?
-        <a href="#" onclick="showRegisterModal()" class="text-blue-400 hover:underline">Register</a>
+      <p class="text-center mt-4">
+        <a href="index.html" class="text-blue-400 hover:underline">Back to Home</a>
       </p>
     </div>
   </div>
 
-  <!-- Register Modal -->
-  <div id="registerModal" class="modal hidden">
-    <div class="modal-content">
-      <h2 class="text-xl font-bold mb-4">Register</h2>
-      <form id="registerForm" class="register-form">
-        <div class="form-group">
-          <label for="regUsername">Username</label>
-          <input type="text" id="regUsername" required class="input-field"/>
-        </div>
-        <div class="form-group">
-          <label for="regPassword">Password</label>
-          <input type="password" id="regPassword" required class="input-field"/>
-        </div>
-        <div class="form-group">
-          <label for="regCollege">College Name</label>
-          <input type="text" id="regCollege" required class="input-field"/>
-        </div>
-        <div class="flex justify-between mt-4">
-          <button type="button" onclick="closeRegisterModal()" class="cancel-btn">Cancel</button>
-          <button type="submit" class="submit-btn">Register</button>
-        </div>
-      </form>
-    </div>
-  </div>
+  <footer class="text-center text-sm p-4 text-gray-400 fixed bottom-0 w-full bg-[#1f1b2e]/90">&copy; 2025 Logic League. All rights reserved.</footer>
 
   <script src="script.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </body>
 </html>
