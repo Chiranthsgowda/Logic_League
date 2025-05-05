@@ -307,8 +307,6 @@ function loadStandingsData() {
   }
 }
 
-// Show the team management modal to remove teams (removed this duplicate function)
-
 // Register modal functions - disabled as per requirements
 function showRegisterModal() {
   alert("Only admin login is permitted. Registration is disabled.");
@@ -426,7 +424,67 @@ function updateRemoveButtonState() {
   }
 }
 
-// Remove selected teams - FIXED VERSION
+// Show password prompt modal
+function showPasswordPrompt(callback) {
+  // Create modal container if it doesn't exist
+  let modalContainer = document.getElementById('passwordPromptModal');
+  if (!modalContainer) {
+    modalContainer = document.createElement('div');
+    modalContainer.id = 'passwordPromptModal';
+    modalContainer.className = 'modal-overlay';
+    modalContainer.style.display = 'flex';
+    
+    const modalContent = document.createElement('div');
+    modalContent.className = 'modal-content';
+    modalContent.innerHTML = `
+      <h3 class="text-xl font-bold mb-4">Confirm Admin Password</h3>
+      <p class="mb-4">Please enter the admin password to remove selected teams:</p>
+      <input type="password" id="adminPasswordConfirm" class="input-field mb-4" placeholder="Enter admin password">
+      <div class="flex justify-end space-x-2">
+        <button class="cancel-btn" onclick="closePasswordPrompt()">Cancel</button>
+        <button class="submit-btn" id="confirmPasswordBtn">Confirm</button>
+      </div>
+    `;
+    
+    modalContainer.appendChild(modalContent);
+    document.body.appendChild(modalContainer);
+    
+    // Add event listener to the confirm button
+    document.getElementById('confirmPasswordBtn').addEventListener('click', function() {
+      const password = document.getElementById('adminPasswordConfirm').value;
+      if (password === 'logicleague2025') {
+        closePasswordPrompt();
+        if (callback) callback(true);
+      } else {
+        alert('Incorrect password!');
+      }
+    });
+    
+    // Add event listener for Enter key
+    document.getElementById('adminPasswordConfirm').addEventListener('keyup', function(event) {
+      if (event.key === 'Enter') {
+        document.getElementById('confirmPasswordBtn').click();
+      }
+    });
+    
+    // Focus the password input
+    setTimeout(() => {
+      document.getElementById('adminPasswordConfirm').focus();
+    }, 100);
+  } else {
+    modalContainer.style.display = 'flex';
+  }
+}
+
+// Close password prompt modal
+function closePasswordPrompt() {
+  const modal = document.getElementById('passwordPromptModal');
+  if (modal) {
+    modal.style.display = 'none';
+  }
+}
+
+// Updated Remove selected teams function with password verification
 function removeSelectedTeams() {
   const checkedBoxes = document.querySelectorAll('.team-checkbox:checked');
   
@@ -439,46 +497,51 @@ function removeSelectedTeams() {
   const confirmDelete = confirm(`Are you sure you want to remove ${checkedBoxes.length} team(s)?`);
   if (!confirmDelete) return;
   
-  // Get the indices of teams to remove
-  const indicesToRemove = Array.from(checkedBoxes).map(checkbox => 
-    parseInt(checkbox.getAttribute('data-index'))
-  );
-  
-  console.log("Indices to remove:", indicesToRemove);
-  
-  // Get current teams from Firebase
-  firebase.database().ref('teams').once('value')
-    .then((snapshot) => {
-      if (snapshot.exists()) {
-        const teams = snapshot.val();
-        
-        // Create new array without the selected teams
-        // Sort indices in descending order to remove from end first
-        const sortedIndices = [...indicesToRemove].sort((a, b) => b - a);
-        
-        // Make a copy of the teams array
-        let updatedTeams = [...teams];
-        
-        // Remove teams from the copy, starting from the highest index
-        sortedIndices.forEach(index => {
-          updatedTeams.splice(index, 1);
+  // Show password prompt
+  showPasswordPrompt(function(isVerified) {
+    if (isVerified) {
+      // Get the indices of teams to remove
+      const indicesToRemove = Array.from(checkedBoxes).map(checkbox => 
+        parseInt(checkbox.getAttribute('data-index'))
+      );
+      
+      console.log("Indices to remove:", indicesToRemove);
+      
+      // Get current teams from Firebase
+      firebase.database().ref('teams').once('value')
+        .then((snapshot) => {
+          if (snapshot.exists()) {
+            const teams = snapshot.val();
+            
+            // Create new array without the selected teams
+            // Sort indices in descending order to remove from end first
+            const sortedIndices = [...indicesToRemove].sort((a, b) => b - a);
+            
+            // Make a copy of the teams array
+            let updatedTeams = [...teams];
+            
+            // Remove teams from the copy, starting from the highest index
+            sortedIndices.forEach(index => {
+              updatedTeams.splice(index, 1);
+            });
+            
+            console.log("Updated teams length:", updatedTeams.length);
+            
+            // Update Firebase
+            return firebase.database().ref('teams').set(updatedTeams);
+          } else {
+            throw new Error("No teams found in database");
+          }
+        })
+        .then(() => {
+          alert('Teams removed successfully!');
+          // Reload the teams table
+          loadTeamsForManagement();
+        })
+        .catch((error) => {
+          console.error("Error removing teams:", error);
+          alert('Error removing teams: ' + error.message);
         });
-        
-        console.log("Updated teams length:", updatedTeams.length);
-        
-        // Update Firebase
-        return firebase.database().ref('teams').set(updatedTeams);
-      } else {
-        throw new Error("No teams found in database");
-      }
-    })
-    .then(() => {
-      alert('Teams removed successfully!');
-      // Reload the teams table
-      loadTeamsForManagement();
-    })
-    .catch((error) => {
-      console.error("Error removing teams:", error);
-      alert('Error removing teams: ' + error.message);
-    });
+    }
+  });
 }
