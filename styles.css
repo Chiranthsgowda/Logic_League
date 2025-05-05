@@ -58,13 +58,27 @@ body {
   height: auto;
 }
 
+/* Add this to your styles.css file */
+
+@keyframes floatRandom {
+  0% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  50% {
+    transform: translate(var(--random-x, 50px), var(--random-y, 50px)) rotate(180deg);
+  }
+  100% {
+    transform: translate(var(--random-x, 30px), var(--random-y, 30px)) rotate(360deg);
+  }
+}
+
 .icon-bg {
   position: fixed;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  z-index: 0;
+  z-index: -1;
   overflow: hidden;
   pointer-events: none;
 }
@@ -73,6 +87,7 @@ body {
   position: absolute;
   font-size: 40px;
   animation: floatRandom 20s linear infinite;
+  opacity: 0.35;
 }
 
 .icon-bg i:nth-child(1) {
