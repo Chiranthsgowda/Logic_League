@@ -1,116 +1,122 @@
 // Script for the Logic League website
 
-// Firebase Configuration
-// Add this to the top of your script.js
+// Initialize Firebase and website features
 document.addEventListener('DOMContentLoaded', function() {
   // Initialize Firebase
-  // Import the functions you need from the SDKs you need
-import { initializeApp } from "firebase/app";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
+  const firebaseConfig = {
+    apiKey: "AIzaSyC1kYLP4GbVbtXYxq4nwQgKLsK1-q9kO-k",
+    authDomain: "logic-league.firebaseapp.com",
+    projectId: "logic-league",
+    storageBucket: "logic-league.firebasestorage.app",
+    messagingSenderId: "352937903231",
+    appId: "1:352937903231:web:02fede5b8d3de8d0a5ab4a"
+  };
 
-// Your web app's Firebase configuration
-const firebaseConfig = {
-  apiKey: "AIzaSyC1kYLP4GbVbtXYxq4nwQgKLsK1-q9kO-k",
-  authDomain: "logic-league.firebaseapp.com",
-  projectId: "logic-league",
-  storageBucket: "logic-league.firebasestorage.app",
-  messagingSenderId: "352937903231",
-  appId: "1:352937903231:web:02fede5b8d3de8d0a5ab4a"
-};
-
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
+  // Initialize Firebase - check if Firebase is already initialized
+  if (!firebase.apps.length) {
+    firebase.initializeApp(firebaseConfig);
+  }
 
   // Initialize random positions for floating icons
   const icons = document.querySelectorAll(".icon-bg i");
-  const windowWidth = window.innerWidth;
-  const windowHeight = window.innerHeight;
+  if (icons.length > 0) {
+    const windowWidth = window.innerWidth;
+    const windowHeight = window.innerHeight;
 
-  icons.forEach((icon) => {
-    const randomX = Math.random() * windowWidth;
-    const randomY = Math.random() * windowHeight;
-    icon.style.left = `${randomX}px`;
-    icon.style.top = `${randomY}px`;
+    icons.forEach((icon) => {
+      const randomX = Math.random() * windowWidth;
+      const randomY = Math.random() * windowHeight;
+      icon.style.left = `${randomX}px`;
+      icon.style.top = `${randomY}px`;
 
-    const moveX = Math.random() * 300 - 150;
-    const moveY = Math.random() * 300 - 150;
-    icon.style.setProperty('--random-x', `${moveX}px`);
-    icon.style.setProperty('--random-y', `${moveY}px`);
-    icon.style.opacity = 0.35;
-  });
+      const moveX = Math.random() * 300 - 150;
+      const moveY = Math.random() * 300 - 150;
+      icon.style.setProperty('--random-x', `${moveX}px`);
+      icon.style.setProperty('--random-y', `${moveY}px`);
+      icon.style.opacity = 0.35;
+    });
+  }
 
   // Highlight nav link on scroll
   const sections = document.querySelectorAll("section");
   const navLinks = document.querySelectorAll(".nav-links a");
 
-  window.addEventListener("scroll", () => {
-    let currentSection = "";
+  if (sections.length > 0 && navLinks.length > 0) {
+    window.addEventListener("scroll", () => {
+      let currentSection = "";
 
-    sections.forEach((section) => {
-      const sectionTop = section.offsetTop;
-      const sectionHeight = section.offsetHeight;
-      if (window.pageYOffset >= sectionTop - sectionHeight / 2) {
-        currentSection = section.getAttribute("id");
-      }
-    });
+      sections.forEach((section) => {
+        const sectionTop = section.offsetTop;
+        const sectionHeight = section.offsetHeight;
+        if (window.pageYOffset >= sectionTop - sectionHeight / 2) {
+          currentSection = section.getAttribute("id");
+        }
+      });
 
-    navLinks.forEach((link) => {
-      link.classList.remove("active");
-      const href = link.getAttribute("href");
-      if (href && href.substring(1) === currentSection) {
-        link.classList.add("active");
-      }
+      navLinks.forEach((link) => {
+        link.classList.remove("active");
+        const href = link.getAttribute("href");
+        if (href && href.substring(1) === currentSection) {
+          link.classList.add("active");
+        }
+      });
     });
-  });
+  }
+
+  // Initialize specific page functionality
+  if (window.location.pathname.includes('standings.html')) {
+    loadStandingsData();
+  }
 });
 
 // Admin Authentication
-// Update adminLogin function in script.js
 function adminLogin(event) {
   event.preventDefault();
   const username = document.getElementById('username').value;
   const password = document.getElementById('password').value;
 
+  console.log("Login attempt:", username); // Debug
+
   // First check if it's the admin account
   if (username === 'admin' && password === 'logicleague2025') {
+    console.log("Admin credentials match"); // Debug
     sessionStorage.setItem('adminAuthenticated', 'true');
     window.location.href = 'admin.html';
     return;
   }
 
-  // Otherwise check Firebase Authentication
-  firebase.auth().signInWithEmailAndPassword(username, password)
-    .then((userCredential) => {
-      // Signed in
-      sessionStorage.setItem('adminAuthenticated', 'true');
-      window.location.href = 'admin.html';
-    })
-    .catch((error) => {
-      // If email/password auth fails, check the custom user database
-      firebase.database().ref('users').orderByChild('username').equalTo(username).once('value')
-        .then((snapshot) => {
-          if (snapshot.exists()) {
-            const userData = Object.values(snapshot.val())[0];
-            if (userData.password === password) {
-              alert(`Welcome, ${userData.username} from ${userData.college}`);
-            } else {
-              alert('Invalid password');
-            }
+  // Otherwise check database users
+  checkDatabaseUsers();
+
+  function checkDatabaseUsers() {
+    console.log("Checking database users"); // Debug
+    // Check the custom user database
+    firebase.database().ref('users').orderByChild('username').equalTo(username).once('value')
+      .then((snapshot) => {
+        if (snapshot.exists()) {
+          const userData = Object.values(snapshot.val())[0];
+          if (userData.password === password) {
+            console.log("Database user match found"); // Debug
+            sessionStorage.setItem('adminAuthenticated', 'true');
+            window.location.href = 'admin.html';
           } else {
-            alert('Invalid username or password');
+            alert('Invalid password');
           }
-        })
-        .catch((error) => {
-          console.error("Error checking login:", error);
-          alert('Error during login. Please try again.');
-        });
-    });
+        } else {
+          alert('Invalid username or password');
+        }
+      })
+      .catch((error) => {
+        console.error("Error checking login:", error);
+        alert('Error during login. Please try again.');
+      });
+  }
 }
 
 // Check if admin is logged in
 function checkAdminAuth() {
   const isAuthenticated = sessionStorage.getItem('adminAuthenticated') === 'true';
+  console.log("Admin auth check:", isAuthenticated); // Debug
   if (!isAuthenticated && window.location.pathname.includes('admin.html')) {
     window.location.href = 'login.html';
   }
@@ -124,6 +130,7 @@ function adminLogout() {
 
 // Initialize admin panel if on admin page
 function initializeAdminPanel() {
+  console.log("Initializing admin panel"); // Debug
   checkAdminAuth();
   
   // Get teams from Firebase
@@ -264,6 +271,7 @@ function saveScores() {
 
 // Load standings data on standings page
 function loadStandingsData() {
+  console.log("Loading standings data"); // Debug
   const standingsTable = document.getElementById('standingsTable');
   if (standingsTable) {
     // Get teams from Firebase
@@ -404,6 +412,7 @@ function closeRegisterModal() {
   document.getElementById('registerModal').classList.add('hidden');
 }
 
+// Register form handler
 document.addEventListener('DOMContentLoaded', () => {
   const registerForm = document.getElementById('registerForm');
   if (registerForm) {
