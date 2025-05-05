@@ -9,7 +9,8 @@ document.addEventListener('DOMContentLoaded', function() {
     projectId: "logic-league",
     storageBucket: "logic-league.firebasestorage.app",
     messagingSenderId: "352937903231",
-    appId: "1:352937903231:web:02fede5b8d3de8d0a5ab4a"
+    appId: "1:352937903231:web:02fede5b8d3de8d0a5ab4a",
+    databaseURL: "https://logic-league-default-rtdb.firebaseio.com" // Adding database URL
   };
 
   // Initialize Firebase - check if Firebase is already initialized
@@ -18,24 +19,7 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   // Initialize random positions for floating icons
-  const icons = document.querySelectorAll(".icon-bg i");
-  if (icons.length > 0) {
-    const windowWidth = window.innerWidth;
-    const windowHeight = window.innerHeight;
-
-    icons.forEach((icon) => {
-      const randomX = Math.random() * windowWidth;
-      const randomY = Math.random() * windowHeight;
-      icon.style.left = `${randomX}px`;
-      icon.style.top = `${randomY}px`;
-
-      const moveX = Math.random() * 300 - 150;
-      const moveY = Math.random() * 300 - 150;
-      icon.style.setProperty('--random-x', `${moveX}px`);
-      icon.style.setProperty('--random-y', `${moveY}px`);
-      icon.style.opacity = 0.35;
-    });
-  }
+  initializeFloatingIcons();
 
   // Highlight nav link on scroll
   const sections = document.querySelectorAll("section");
@@ -69,6 +53,36 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 });
 
+// Initialize floating icons
+function initializeFloatingIcons() {
+  const icons = document.querySelectorAll(".icon-bg i");
+  if (icons.length > 0) {
+    const windowWidth = window.innerWidth;
+    const windowHeight = window.innerHeight;
+
+    icons.forEach((icon, index) => {
+      // Create random positions
+      const randomX = Math.random() * windowWidth;
+      const randomY = Math.random() * windowHeight;
+      
+      // Position icons
+      icon.style.left = `${randomX}px`;
+      icon.style.top = `${randomY}px`;
+      
+      // Calculate random movement
+      const moveX = Math.random() * 300 - 150;
+      const moveY = Math.random() * 300 - 150;
+      
+      // Set CSS variables for animation
+      icon.style.setProperty('--random-x', `${moveX}px`);
+      icon.style.setProperty('--random-y', `${moveY}px`);
+      
+      // Set opacity
+      icon.style.opacity = '0.35';
+    });
+  }
+}
+
 // Admin Authentication
 function adminLogin(event) {
   event.preventDefault();
@@ -77,39 +91,14 @@ function adminLogin(event) {
 
   console.log("Login attempt:", username); // Debug
 
-  // First check if it's the admin account
+  // Only allow predefined admin login
   if (username === 'admin' && password === 'logicleague2025') {
     console.log("Admin credentials match"); // Debug
     sessionStorage.setItem('adminAuthenticated', 'true');
     window.location.href = 'admin.html';
     return;
-  }
-
-  // Otherwise check database users
-  checkDatabaseUsers();
-
-  function checkDatabaseUsers() {
-    console.log("Checking database users"); // Debug
-    // Check the custom user database
-    firebase.database().ref('users').orderByChild('username').equalTo(username).once('value')
-      .then((snapshot) => {
-        if (snapshot.exists()) {
-          const userData = Object.values(snapshot.val())[0];
-          if (userData.password === password) {
-            console.log("Database user match found"); // Debug
-            sessionStorage.setItem('adminAuthenticated', 'true');
-            window.location.href = 'admin.html';
-          } else {
-            alert('Invalid password');
-          }
-        } else {
-          alert('Invalid username or password');
-        }
-      })
-      .catch((error) => {
-        console.error("Error checking login:", error);
-        alert('Error during login. Please try again.');
-      });
+  } else {
+    alert('Invalid username or password. Only admin can login.');
   }
 }
 
@@ -404,58 +393,26 @@ function removeSelectedTeams() {
     });
 }
 
+// Register modal functions - disabled as per requirements
 function showRegisterModal() {
-  document.getElementById('registerModal').classList.remove('hidden');
+  alert("Only admin login is permitted. Registration is disabled.");
+  return false;
 }
 
 function closeRegisterModal() {
   document.getElementById('registerModal').classList.add('hidden');
 }
 
-// Register form handler
+// This function will be disabled since we only want admin login
 document.addEventListener('DOMContentLoaded', () => {
   const registerForm = document.getElementById('registerForm');
   if (registerForm) {
     registerForm.addEventListener('submit', function (e) {
       e.preventDefault();
-
-      const regUsername = document.getElementById('regUsername').value;
-      const regPassword = document.getElementById('regPassword').value;
-      const regCollege = document.getElementById('regCollege').value;
-
-      if (!regUsername || !regPassword || !regCollege) {
-        alert('Please fill in all fields.');
-        return;
-      }
-
-      // Check if username already exists
-      firebase.database().ref('users').orderByChild('username').equalTo(regUsername).once('value')
-        .then((snapshot) => {
-          if (snapshot.exists()) {
-            alert('Username already exists. Choose another.');
-          } else {
-            // Add new user to Firebase
-            const newUser = {
-              username: regUsername,
-              password: regPassword,
-              college: regCollege
-            };
-            
-            firebase.database().ref('users').push(newUser)
-              .then(() => {
-                alert('Registration successful! You can now log in.');
-                closeRegisterModal();
-              })
-              .catch((error) => {
-                console.error("Error registering user:", error);
-                alert('Error during registration. Please try again.');
-              });
-          }
-        })
-        .catch((error) => {
-          console.error("Error checking username:", error);
-          alert('Error checking username. Please try again.');
-        });
+      alert("Only admin login is permitted. Registration is disabled.");
     });
   }
+  
+  // Call initializeFloatingIcons to ensure they're created
+  initializeFloatingIcons();
 });
