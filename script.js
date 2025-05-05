@@ -79,13 +79,33 @@ function initializeFloatingIcons() {
       icon.style.setProperty('--random-x', `${moveX}px`);
       icon.style.setProperty('--random-y', `${moveY}px`);
       
-      // Set opacity
+      // Opacity
       icon.style.opacity = '0.35';
     });
   }
 }
 
 // Admin Authentication
+// NEW: Load Firebase Auth
+if (typeof firebase.auth === 'undefined') {
+  document.write('<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>');
+}
+
+// Sign in anonymously to Firebase for admin operations
+function signInAnonymously() {
+  return new Promise((resolve, reject) => {
+    firebase.auth().signInAnonymously()
+      .then((userCredential) => {
+        console.log("Signed in anonymously");
+        resolve(userCredential.user);
+      })
+      .catch((error) => {
+        console.error("Anonymous auth error:", error);
+        reject(error);
+      });
+  });
+}
+
 function adminLogin(event) {
   event.preventDefault();
   const username = document.getElementById('username').value;
@@ -96,20 +116,42 @@ function adminLogin(event) {
   // Only allow predefined admin login
   if (username === 'admin' && password === 'logicleague2025') {
     console.log("Admin credentials match"); // Debug
-    sessionStorage.setItem('adminAuthenticated', 'true');
-    window.location.href = 'admin.html';
-    return;
+    
+    // Sign in anonymously to Firebase
+    signInAnonymously()
+      .then(() => {
+        sessionStorage.setItem('adminAuthenticated', 'true');
+        window.location.href = 'admin.html';
+      })
+      .catch((error) => {
+        alert('Error authenticating with Firebase: ' + error.message);
+      });
   } else {
     alert('Invalid username or password. Only admin can login.');
   }
 }
 
-// Check if admin is logged in
+// Check if admin is logged in and Firebase auth is active
 function checkAdminAuth() {
   const isAuthenticated = sessionStorage.getItem('adminAuthenticated') === 'true';
   console.log("Admin auth check:", isAuthenticated); // Debug
+  
   if (!isAuthenticated && (window.location.pathname.includes('admin.html') || window.location.pathname.includes('team-management.html'))) {
     window.location.href = 'login.html';
+    return;
+  }
+  
+  // Make sure Firebase auth is signed in anonymously if we're on admin pages
+  if (isAuthenticated) {
+    firebase.auth().onAuthStateChanged((user) => {
+      if (!user && (window.location.pathname.includes('admin.html') || window.location.pathname.includes('team-management.html'))) {
+        signInAnonymously().catch(error => {
+          console.error("Failed to sign in anonymously:", error);
+          alert("Authentication error. Please log in again.");
+          adminLogout();
+        });
+      }
+    });
   }
   
   // If we're on the team management page, load the teams
@@ -121,7 +163,15 @@ function checkAdminAuth() {
 // Admin logout
 function adminLogout() {
   sessionStorage.removeItem('adminAuthenticated');
-  window.location.href = 'login.html';
+  
+  // Sign out from Firebase
+  firebase.auth().signOut().then(() => {
+    console.log("Signed out from Firebase");
+    window.location.href = 'login.html';
+  }).catch((error) => {
+    console.error("Sign out error:", error);
+    window.location.href = 'login.html';
+  });
 }
 
 // Initialize admin panel if on admin page
@@ -184,18 +234,37 @@ function finalizeTeams() {
     return;
   }
 
-  // Save teams to Firebase
-  const teamsRef = firebase.database().ref('teams');
-  teamsRef.set(teams)
-    .then(() => {
-      document.getElementById('addTeamsSection').style.display = 'none';
-      document.getElementById('scoringSection').style.display = 'block';
-      generateScoringForm();
-    })
-    .catch((error) => {
-      console.error("Error saving teams:", error);
-      alert('Error saving teams. Please try again.');
-    });
+  // Make sure we're authenticated
+  ensureFirebaseAuth().then(() => {
+    // Save teams to Firebase
+    const teamsRef = firebase.database().ref('teams');
+    teamsRef.set(teams)
+      .then(() => {
+        document.getElementById('addTeamsSection').style.display = 'none';
+        document.getElementById('scoringSection').style.display = 'block';
+        generateScoringForm();
+      })
+      .catch((error) => {
+        console.error("Error saving teams:", error);
+        alert('Error saving teams. Please try again.');
+      });
+  }).catch(error => {
+    alert('Authentication error: ' + error.message);
+  });
+}
+
+// Helper to ensure Firebase auth is active
+function ensureFirebaseAuth() {
+  return new Promise((resolve, reject) => {
+    const user = firebase.auth().currentUser;
+    if (user) {
+      resolve(user);
+    } else {
+      signInAnonymously()
+        .then(user => resolve(user))
+        .catch(error => reject(error));
+    }
+  });
 }
 
 // Generate scoring form based on saved teams
@@ -238,26 +307,31 @@ function updateScores(event) {
   const roundIndex = parseInt(event.target.dataset.round);
   const score = parseInt(event.target.value) || 0;
 
-  // Get current teams from Firebase
-  firebase.database().ref('teams').once('value')
-    .then((snapshot) => {
-      if (snapshot.exists()) {
-        const teams = snapshot.val();
-        teams[teamIndex].scores[roundIndex] = score;
-        teams[teamIndex].total = teams[teamIndex].scores.reduce((sum, score) => sum + score, 0);
+  // Make sure we're authenticated before updating
+  ensureFirebaseAuth().then(() => {
+    // Get current teams from Firebase
+    firebase.database().ref('teams').once('value')
+      .then((snapshot) => {
+        if (snapshot.exists()) {
+          const teams = snapshot.val();
+          teams[teamIndex].scores[roundIndex] = score;
+          teams[teamIndex].total = teams[teamIndex].scores.reduce((sum, score) => sum + score, 0);
 
-        // Update the total score in the UI
-        const teamScoreRow = event.target.closest('.team-scores-row');
-        const totalScoreElement = teamScoreRow.querySelector('.total-score');
-        totalScoreElement.textContent = teams[teamIndex].total;
+          // Update the total score in the UI
+          const teamScoreRow = event.target.closest('.team-scores-row');
+          const totalScoreElement = teamScoreRow.querySelector('.total-score');
+          totalScoreElement.textContent = teams[teamIndex].total;
 
-        // Save the updated team back to Firebase
-        firebase.database().ref('teams').set(teams);
-      }
-    })
-    .catch((error) => {
-      console.error("Error updating scores:", error);
-    });
+          // Save the updated team back to Firebase
+          firebase.database().ref('teams').set(teams);
+        }
+      })
+      .catch((error) => {
+        console.error("Error updating scores:", error);
+      });
+  }).catch(error => {
+    alert('Authentication error: ' + error.message);
+  });
 }
 
 // Save all scores
@@ -484,7 +558,7 @@ function closePasswordPrompt() {
   }
 }
 
-// Updated Remove selected teams function with password verification
+// Updated Remove selected teams function with proper Firebase authentication
 function removeSelectedTeams() {
   const checkedBoxes = document.querySelectorAll('.team-checkbox:checked');
   
@@ -500,48 +574,54 @@ function removeSelectedTeams() {
   // Show password prompt
   showPasswordPrompt(function(isVerified) {
     if (isVerified) {
-      // Get the indices of teams to remove
-      const indicesToRemove = Array.from(checkedBoxes).map(checkbox => 
-        parseInt(checkbox.getAttribute('data-index'))
-      );
-      
-      console.log("Indices to remove:", indicesToRemove);
-      
-      // Get current teams from Firebase
-      firebase.database().ref('teams').once('value')
-        .then((snapshot) => {
-          if (snapshot.exists()) {
-            const teams = snapshot.val();
-            
-            // Create new array without the selected teams
-            // Sort indices in descending order to remove from end first
-            const sortedIndices = [...indicesToRemove].sort((a, b) => b - a);
-            
-            // Make a copy of the teams array
-            let updatedTeams = [...teams];
-            
-            // Remove teams from the copy, starting from the highest index
-            sortedIndices.forEach(index => {
-              updatedTeams.splice(index, 1);
-            });
-            
-            console.log("Updated teams length:", updatedTeams.length);
-            
-            // Update Firebase
-            return firebase.database().ref('teams').set(updatedTeams);
-          } else {
-            throw new Error("No teams found in database");
-          }
-        })
-        .then(() => {
-          alert('Teams removed successfully!');
-          // Reload the teams table
-          loadTeamsForManagement();
-        })
-        .catch((error) => {
-          console.error("Error removing teams:", error);
-          alert('Error removing teams: ' + error.message);
-        });
+      // Ensure Firebase Authentication
+      ensureFirebaseAuth().then(() => {
+        // Now get the indices of teams to remove
+        const indicesToRemove = Array.from(checkedBoxes).map(checkbox => 
+          parseInt(checkbox.getAttribute('data-index'))
+        );
+        
+        console.log("Indices to remove:", indicesToRemove);
+        
+        // Get current teams from Firebase
+        firebase.database().ref('teams').once('value')
+          .then((snapshot) => {
+            if (snapshot.exists()) {
+              const teams = snapshot.val();
+              
+              // Create new array without the selected teams
+              // Sort indices in descending order to remove from end first
+              const sortedIndices = [...indicesToRemove].sort((a, b) => b - a);
+              
+              // Make a copy of the teams array
+              let updatedTeams = [...teams];
+              
+              // Remove teams from the copy, starting from the highest index
+              sortedIndices.forEach(index => {
+                updatedTeams.splice(index, 1);
+              });
+              
+              console.log("Updated teams length:", updatedTeams.length);
+              
+              // Update Firebase
+              return firebase.database().ref('teams').set(updatedTeams);
+            } else {
+              throw new Error("No teams found in database");
+            }
+          })
+          .then(() => {
+            alert('Teams removed successfully!');
+            // Reload the teams table
+            loadTeamsForManagement();
+          })
+          .catch((error) => {
+            console.error("Error removing teams:", error);
+            alert('Error removing teams: ' + error.message);
+          });
+      }).catch(error => {
+        console.error("Auth error during team removal:", error);
+        alert('Authentication error: ' + error.message);
+      });
     }
   });
 }
