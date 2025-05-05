@@ -264,7 +264,7 @@ function finalizeTeams() {
     });
 }
 
-// Generate scoring form based on saved teams
+// Generate scoring form based on saved teams - FIXED
 function generateScoringForm() {
   firebase.database().ref('teams').once('value')
     .then((snapshot) => {
@@ -274,22 +274,22 @@ function generateScoringForm() {
         scoringForm.innerHTML = '';
 
         teams.forEach((team, index) => {
-          const teamScoreRow = document.createElement('div');
-          teamScoreRow.className = 'team-scores-row';
-          teamScoreRow.innerHTML = `
-            <div style="flex: 1;">${team.name} (${team.college})</div>
-            <input type="number" data-team="${index}" data-round="0" value="${team.scores[0]}" min="0" class="score-input">
-            <input type="number" data-team="${index}" data-round="1" value="${team.scores[1]}" min="0" class="score-input">
-            <input type="number" data-team="${index}" data-round="2" value="${team.scores[2]}" min="0" class="score-input">
-            <input type="number" data-team="${index}" data-round="3" value="${team.scores[3]}" min="0" class="score-input">
-            <div class="total-score">${team.total}</div>
+          const row = document.createElement('tr');
+          row.innerHTML = `
+            <td style="text-align: left;">${team.name} (${team.college})</td>
+            <td><input type="number" data-team="${index}" data-round="0" value="${team.scores[0]}" min="0" class="score-input"></td>
+            <td><input type="number" data-team="${index}" data-round="1" value="${team.scores[1]}" min="0" class="score-input"></td>
+            <td><input type="number" data-team="${index}" data-round="2" value="${team.scores[2]}" min="0" class="score-input"></td>
+            <td><input type="number" data-team="${index}" data-round="3" value="${team.scores[3]}" min="0" class="score-input"></td>
+            <td class="total-score">${team.total}</td>
           `;
-          scoringForm.appendChild(teamScoreRow);
+          scoringForm.appendChild(row);
         });
 
-        const scoreInputs = document.querySelectorAll('.score-input');
-        scoreInputs.forEach(input => {
+        // Add event listeners to all score inputs
+        document.querySelectorAll('.score-input').forEach(input => {
           input.addEventListener('change', updateScores);
+          input.addEventListener('input', updateScores); // Also listen for input to update in real-time
         });
       }
     })
@@ -298,7 +298,7 @@ function generateScoringForm() {
     });
 }
 
-// Update scores when score inputs change
+// Update scores when score inputs change - FIXED
 function updateScores(event) {
   const teamIndex = parseInt(event.target.dataset.team);
   const roundIndex = parseInt(event.target.dataset.round);
@@ -316,30 +316,35 @@ function updateScores(event) {
     .then((snapshot) => {
       if (snapshot.exists()) {
         const teams = snapshot.val();
+        
+        // Update the score in the teams array
         teams[teamIndex].scores[roundIndex] = score;
-        teams[teamIndex].total = teams[teamIndex].scores.reduce((sum, score) => sum + score, 0);
+        
+        // Recalculate total score
+        const total = teams[teamIndex].scores.reduce((sum, score) => sum + score, 0);
+        teams[teamIndex].total = total;
 
         // Update the total score in the UI
-        const teamScoreRow = event.target.closest('.team-scores-row');
-        const totalScoreElement = teamScoreRow.querySelector('.total-score');
-        totalScoreElement.textContent = teams[teamIndex].total;
+        const row = event.target.closest('tr');
+        const totalScoreElement = row.querySelector('.total-score');
+        totalScoreElement.textContent = total;
 
-        // Save the updated team back to Firebase
-        firebase.database().ref('teams').set(teams)
-          .catch((error) => {
-            console.error("Error updating scores:", error);
-            alert('Error updating scores: ' + error.message);
-            
-            // If we get a permission error, redirect to login
-            if (error.code === 'PERMISSION_DENIED') {
-              alert('Permission denied. Please log in again.');
-              adminLogout();
-            }
-          });
+        // Save the updated teams to Firebase
+        return firebase.database().ref('teams').set(teams);
       }
+    })
+    .then(() => {
+      console.log("Scores updated successfully");
     })
     .catch((error) => {
       console.error("Error updating scores:", error);
+      alert('Error updating scores: ' + error.message);
+      
+      // If we get a permission error, redirect to login
+      if (error.code === 'PERMISSION_DENIED') {
+        alert('Permission denied. Please log in again.');
+        adminLogout();
+      }
     });
 }
 
@@ -352,7 +357,74 @@ function saveScores() {
     return;
   }
   
-  alert('Scores saved successfully!');
+  // Get all score inputs
+  const scoreInputs = document.querySelectorAll('.score-input');
+  const scoreUpdates = [];
+  
+  // Create an array of promises for batch updating
+  scoreInputs.forEach(input => {
+    const teamIndex = parseInt(input.dataset.team);
+    const roundIndex = parseInt(input.dataset.round);
+    const score = parseInt(input.value) || 0;
+    
+    scoreUpdates.push({
+      teamIndex: teamIndex,
+      roundIndex: roundIndex,
+      score: score
+    });
+  });
+  
+  // Get current teams from Firebase
+  firebase.database().ref('teams').once('value')
+    .then((snapshot) => {
+      if (snapshot.exists()) {
+        const teams = snapshot.val();
+        
+        // Apply all score updates
+        scoreUpdates.forEach(update => {
+          teams[update.teamIndex].scores[update.roundIndex] = update.score;
+        });
+        
+        // Recalculate all totals
+        teams.forEach(team => {
+          team.total = team.scores.reduce((sum, score) => sum + score, 0);
+        });
+        
+        // Save all updates to Firebase
+        return firebase.database().ref('teams').set(teams);
+      }
+    })
+    .then(() => {
+      alert('Scores saved successfully!');
+      
+      // Update UI to show new totals
+      firebase.database().ref('teams').once('value')
+        .then((snapshot) => {
+          if (snapshot.exists()) {
+            const teams = snapshot.val();
+            const rows = document.querySelectorAll('#scoringForm tr');
+            
+            teams.forEach((team, index) => {
+              if (rows[index]) {
+                const totalCell = rows[index].querySelector('.total-score');
+                if (totalCell) {
+                  totalCell.textContent = team.total;
+                }
+              }
+            });
+          }
+        });
+    })
+    .catch((error) => {
+      console.error("Error saving scores:", error);
+      alert('Error saving scores: ' + error.message);
+      
+      // If we get a permission error, redirect to login
+      if (error.code === 'PERMISSION_DENIED') {
+        alert('Permission denied. Please log in again.');
+        adminLogout();
+      }
+    });
 }
 
 // Load standings data on standings page
