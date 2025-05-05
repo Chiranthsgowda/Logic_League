@@ -14,6 +14,18 @@ body {
   margin: 0;
   padding: 0;
 }
+.link-standings {
+  color: #facc15; /* bright yellow */
+  font-weight: bold;
+  font-size: 1.25rem;
+  text-decoration: underline;
+  transition: color 0.3s ease;
+}
+
+.link-standings:hover {
+  color: #fde68a; /* lighter yellow for hover */
+}
+
 
 #home, .main-content, main {
   margin-top: 80px; /* Adjust this value to match your navigation height */
@@ -49,7 +61,7 @@ body {
 }
 
 #home .extra-logo img {
-  width: 50px;
+  width: 90px;
   height: auto;
 }
 
