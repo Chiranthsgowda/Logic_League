@@ -416,3 +416,151 @@ document.addEventListener('DOMContentLoaded', () => {
   // Call initializeFloatingIcons to ensure they're created
   initializeFloatingIcons();
 });
+
+// Add these functions to your existing script.js file
+
+// Load teams for the management page
+function loadTeamsForManagement() {
+  console.log("Loading teams for management");
+  
+  // Make sure user is authenticated
+  checkAdminAuth();
+  
+  const tableBody = document.getElementById('teamManagementTableBody');
+  if (!tableBody) return;
+  
+  // Clear the table
+  tableBody.innerHTML = '<tr><td colspan="8" class="text-center">Loading teams...</td></tr>';
+  
+  // Get teams from Firebase
+  firebase.database().ref('teams').once('value')
+    .then((snapshot) => {
+      if (snapshot.exists()) {
+        const teams = snapshot.val();
+        
+        // Clear loading message
+        tableBody.innerHTML = '';
+        
+        // If no teams found
+        if (teams.length === 0) {
+          tableBody.innerHTML = '<tr><td colspan="8" class="text-center">No teams found</td></tr>';
+          return;
+        }
+        
+        // Add each team to the table
+        teams.forEach((team, index) => {
+          const row = document.createElement('tr');
+          row.innerHTML = `
+            <td><input type="checkbox" class="team-checkbox" data-index="${index}"></td>
+            <td>${team.name}</td>
+            <td>${team.college}</td>
+            <td>${team.scores[0]}</td>
+            <td>${team.scores[1]}</td>
+            <td>${team.scores[2]}</td>
+            <td>${team.scores[3]}</td>
+            <td>${team.total}</td>
+          `;
+          
+          // Make the entire row clickable to select the checkbox
+          row.addEventListener('click', function(e) {
+            // Skip if the checkbox itself was clicked
+            if (e.target.type !== 'checkbox') {
+              const checkbox = this.querySelector('.team-checkbox');
+              checkbox.checked = !checkbox.checked;
+              updateRemoveButtonState();
+            }
+          });
+          
+          tableBody.appendChild(row);
+        });
+        
+        // Add event listeners to checkboxes
+        document.querySelectorAll('.team-checkbox').forEach(checkbox => {
+          checkbox.addEventListener('change', updateRemoveButtonState);
+        });
+        
+        // Initialize remove button state
+        updateRemoveButtonState();
+      } else {
+        tableBody.innerHTML = '<tr><td colspan="8" class="text-center">No teams found</td></tr>';
+      }
+    })
+    .catch((error) => {
+      console.error("Error loading teams:", error);
+      tableBody.innerHTML = `<tr><td colspan="8" class="text-center text-red-500">Error loading teams: ${error.message}</td></tr>`;
+    });
+}
+
+// Toggle all team checkboxes
+function toggleAllTeams() {
+  const selectAllCheckbox = document.getElementById('selectAllTeams');
+  const teamCheckboxes = document.querySelectorAll('.team-checkbox');
+  
+  teamCheckboxes.forEach(checkbox => {
+    checkbox.checked = selectAllCheckbox.checked;
+  });
+  
+  updateRemoveButtonState();
+}
+
+// Update the remove button state based on selections
+function updateRemoveButtonState() {
+  const removeButton = document.getElementById('removeTeamsBtn');
+  const checkedBoxes = document.querySelectorAll('.team-checkbox:checked');
+  
+  if (removeButton) {
+    if (checkedBoxes.length > 0) {
+      removeButton.removeAttribute('disabled');
+      removeButton.textContent = `Remove Selected Teams (${checkedBoxes.length})`;
+    } else {
+      removeButton.setAttribute('disabled', 'disabled');
+      removeButton.textContent = 'Remove Selected Teams';
+    }
+  }
+}
+
+// Remove selected teams
+function removeSelectedTeams() {
+  const checkedBoxes = document.querySelectorAll('.team-checkbox:checked');
+  
+  if (checkedBoxes.length === 0) {
+    alert('Please select at least one team to remove');
+    return;
+  }
+  
+  // Confirm deletion
+  const confirmDelete = confirm(`Are you sure you want to remove ${checkedBoxes.length} team(s)?`);
+  if (!confirmDelete) return;
+  
+  // Get the indices of teams to remove
+  const teamsToRemove = Array.from(checkedBoxes).map(checkbox => 
+    parseInt(checkbox.getAttribute('data-index'))
+  );
+  
+  // Get current teams from Firebase
+  firebase.database().ref('teams').once('value')
+    .then((snapshot) => {
+      if (snapshot.exists()) {
+        let teams = snapshot.val();
+        
+        // Create new array without the selected teams
+        const updatedTeams = teams.filter((_, index) => !teamsToRemove.includes(index));
+        
+        // Update Firebase
+        firebase.database().ref('teams').set(updatedTeams)
+          .then(() => {
+            alert('Teams removed successfully!');
+            // Reload the teams table
+            loadTeamsForManagement();
+          })
+          .catch((error) => {
+            console.error("Error removing teams:", error);
+            alert('Error removing teams. Please try again.');
+          });
+      }
+    })
+    .catch((error) => {
+      console.error("Error accessing teams data:", error);
+      alert('Error accessing teams data. Please try again.');
+    });
+}
