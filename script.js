@@ -50,6 +50,8 @@ document.addEventListener('DOMContentLoaded', function() {
   // Initialize specific page functionality
   if (window.location.pathname.includes('standings.html')) {
     loadStandingsData();
+  } else if (window.location.pathname.includes('team-management.html')) {
+    loadTeamsForManagement();
   }
 });
 
@@ -106,8 +108,13 @@ function adminLogin(event) {
 function checkAdminAuth() {
   const isAuthenticated = sessionStorage.getItem('adminAuthenticated') === 'true';
   console.log("Admin auth check:", isAuthenticated); // Debug
-  if (!isAuthenticated && window.location.pathname.includes('admin.html')) {
+  if (!isAuthenticated && (window.location.pathname.includes('admin.html') || window.location.pathname.includes('team-management.html'))) {
     window.location.href = 'login.html';
+  }
+  
+  // If we're on the team management page, load the teams
+  if (window.location.pathname.includes('team-management.html')) {
+    loadTeamsForManagement();
   }
 }
 
@@ -300,98 +307,7 @@ function loadStandingsData() {
   }
 }
 
-// Show the team management modal to remove teams
-function showRemoveTeamsModal() {
-  const password = prompt('Enter admin password to access team removal:');
-  if (password !== 'logicleague2025') {
-    alert('Incorrect password');
-    return;
-  }
-
-  let modalOverlay = document.getElementById('removeTeamsModal');
-  if (!modalOverlay) {
-    modalOverlay = document.createElement('div');
-    modalOverlay.id = 'removeTeamsModal';
-    modalOverlay.className = 'modal-overlay';
-
-    const modalContent = document.createElement('div');
-    modalContent.className = 'modal-content';
-    modalContent.innerHTML = `
-      <h3 class="text-2xl font-bold mb-4">Remove Teams</h3>
-      <p class="mb-4">Select the teams you want to remove:</p>
-      <div id="removeTeamsList" class="mb-6"></div>
-      <div class="flex justify-between">
-        <button onclick="closeRemoveTeamsModal()">Cancel</button>
-        <button onclick="removeSelectedTeams()" class="danger">Remove Selected</button>
-      </div>
-    `;
-
-    modalOverlay.appendChild(modalContent);
-    document.body.appendChild(modalOverlay);
-  }
-
-  // Get teams from Firebase
-  firebase.database().ref('teams').once('value')
-    .then((snapshot) => {
-      if (snapshot.exists()) {
-        const teams = snapshot.val();
-        const removeTeamsList = document.getElementById('removeTeamsList');
-        removeTeamsList.innerHTML = '';
-
-        teams.forEach((team, index) => {
-          const teamItem = document.createElement('div');
-          teamItem.innerHTML = `
-            <label>
-              <input type="checkbox" value="${index}">
-              ${team.name} (${team.college})
-            </label>
-          `;
-          removeTeamsList.appendChild(teamItem);
-        });
-
-        modalOverlay.style.display = 'flex';
-      }
-    })
-    .catch((error) => {
-      console.error("Error loading teams for removal:", error);
-    });
-}
-
-// Close team removal modal
-function closeRemoveTeamsModal() {
-  const modal = document.getElementById('removeTeamsModal');
-  if (modal) modal.style.display = 'none';
-}
-
-// Remove selected teams
-function removeSelectedTeams() {
-  const checkboxes = document.querySelectorAll('#removeTeamsList input[type="checkbox"]:checked');
-  const selectedIndexes = Array.from(checkboxes).map(cb => parseInt(cb.value));
-
-  // Get current teams from Firebase
-  firebase.database().ref('teams').once('value')
-    .then((snapshot) => {
-      if (snapshot.exists()) {
-        let teams = snapshot.val();
-        teams = teams.filter((_, index) => !selectedIndexes.includes(index));
-
-        // Save updated teams to Firebase
-        firebase.database().ref('teams').set(teams)
-          .then(() => {
-            closeRemoveTeamsModal();
-            alert('Selected teams have been removed.');
-            location.reload();
-          })
-          .catch((error) => {
-            console.error("Error removing teams:", error);
-            alert('Error removing teams. Please try again.');
-          });
-      }
-    })
-    .catch((error) => {
-      console.error("Error getting teams for removal:", error);
-    });
-}
+// Show the team management modal to remove teams (removed this duplicate function)
 
 // Register modal functions - disabled as per requirements
 function showRegisterModal() {
@@ -403,31 +319,22 @@ function closeRegisterModal() {
   document.getElementById('registerModal').classList.add('hidden');
 }
 
-// This function will be disabled since we only want admin login
-document.addEventListener('DOMContentLoaded', () => {
-  const registerForm = document.getElementById('registerForm');
-  if (registerForm) {
-    registerForm.addEventListener('submit', function (e) {
-      e.preventDefault();
-      alert("Only admin login is permitted. Registration is disabled.");
-    });
-  }
-  
-  // Call initializeFloatingIcons to ensure they're created
-  initializeFloatingIcons();
-});
-
-// Add these functions to your existing script.js file
-
 // Load teams for the management page
 function loadTeamsForManagement() {
   console.log("Loading teams for management");
   
   // Make sure user is authenticated
-  checkAdminAuth();
+  const isAuthenticated = sessionStorage.getItem('adminAuthenticated') === 'true';
+  if (!isAuthenticated) {
+    window.location.href = 'login.html';
+    return;
+  }
   
   const tableBody = document.getElementById('teamManagementTableBody');
-  if (!tableBody) return;
+  if (!tableBody) {
+    console.error("Team management table body not found");
+    return;
+  }
   
   // Clear the table
   tableBody.innerHTML = '<tr><td colspan="8" class="text-center">Loading teams...</td></tr>';
@@ -519,7 +426,7 @@ function updateRemoveButtonState() {
   }
 }
 
-// Remove selected teams
+// Remove selected teams - FIXED VERSION
 function removeSelectedTeams() {
   const checkedBoxes = document.querySelectorAll('.team-checkbox:checked');
   
@@ -533,34 +440,45 @@ function removeSelectedTeams() {
   if (!confirmDelete) return;
   
   // Get the indices of teams to remove
-  const teamsToRemove = Array.from(checkedBoxes).map(checkbox => 
+  const indicesToRemove = Array.from(checkedBoxes).map(checkbox => 
     parseInt(checkbox.getAttribute('data-index'))
   );
+  
+  console.log("Indices to remove:", indicesToRemove);
   
   // Get current teams from Firebase
   firebase.database().ref('teams').once('value')
     .then((snapshot) => {
       if (snapshot.exists()) {
-        let teams = snapshot.val();
+        const teams = snapshot.val();
         
         // Create new array without the selected teams
-        const updatedTeams = teams.filter((_, index) => !teamsToRemove.includes(index));
+        // Sort indices in descending order to remove from end first
+        const sortedIndices = [...indicesToRemove].sort((a, b) => b - a);
+        
+        // Make a copy of the teams array
+        let updatedTeams = [...teams];
+        
+        // Remove teams from the copy, starting from the highest index
+        sortedIndices.forEach(index => {
+          updatedTeams.splice(index, 1);
+        });
+        
+        console.log("Updated teams length:", updatedTeams.length);
         
         // Update Firebase
-        firebase.database().ref('teams').set(updatedTeams)
-          .then(() => {
-            alert('Teams removed successfully!');
-            // Reload the teams table
-            loadTeamsForManagement();
-          })
-          .catch((error) => {
-            console.error("Error removing teams:", error);
-            alert('Error removing teams. Please try again.');
-          });
+        return firebase.database().ref('teams').set(updatedTeams);
+      } else {
+        throw new Error("No teams found in database");
       }
     })
+    .then(() => {
+      alert('Teams removed successfully!');
+      // Reload the teams table
+      loadTeamsForManagement();
+    })
     .catch((error) => {
-      console.error("Error accessing teams data:", error);
-      alert('Error accessing teams data. Please try again.');
+      console.error("Error removing teams:", error);
+      alert('Error removing teams: ' + error.message);
     });
 }
