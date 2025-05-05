@@ -38,54 +38,58 @@
   </nav>
 
   <main>
-  <!-- Admin Panel -->
-  <div class="admin-panel p-6 bg-[#2c2b3f] rounded-xl shadow-lg">
-    <h2 class="text-3xl font-bold glow mb-6 text-center text-white">Organizer Control Panel</h2>
+    <!-- Admin Panel -->
+    <div class="admin-panel p-6 bg-[#2c2b3f] rounded-xl shadow-lg">
+      <h2 class="text-3xl font-bold glow mb-6 text-center text-white">Organizer Control Panel</h2>
 
-    <!-- Scoring Section -->
-    <div id="scoringSection" style="display: none;" class="mb-6">
-      <div class="actions-bar mb-4">
-        <h3 class="text-xl font-semibold text-white">Update Scores</h3>
-        <div>
-          <button onclick="saveScores()" class="save-btn"><i class="fas fa-save mr-2"></i>Save Scores</button>
-          <button onclick="window.location.href='standings.html'" class="ml-2 view-standings-btn">View Standings</button>
-          <button onclick="window.location.href='team-management.html'" class="ml-2 danger-btn"><i class="fas fa-users-cog mr-2"></i>Manage Teams</button>
+      <!-- Scoring Section -->
+      <div id="scoringSection" style="display: none;" class="mb-6">
+        <div class="actions-bar mb-4">
+          <h3 class="text-xl font-semibold text-white">Update Scores</h3>
+          <div>
+            <button onclick="saveScores()" class="save-btn"><i class="fas fa-save mr-2"></i>Save Scores</button>
+            <button onclick="window.location.href='standings.html'" class="ml-2 view-standings-btn">View Standings</button>
+            <button onclick="window.location.href='team-management.html'" class="ml-2 danger-btn"><i class="fas fa-users-cog mr-2"></i>Manage Teams</button>
+          </div>
+        </div>
+
+        <div class="scores-table-container">
+          <table class="scores-table">
+            <thead>
+              <tr>
+                <th style="text-align: left;">Team</th>
+                <th>Round 1</th>
+                <th>Round 2</th>
+                <th>Round 3</th>
+                <th>Round 4</th>
+                <th>Total</th>
+              </tr>
+            </thead>
+            <tbody id="scoringForm">
+              <!-- Score rows will be populated dynamically -->
+            </tbody>
+          </table>
         </div>
       </div>
 
-      <div class="mb-4">
-        <div class="team-scores-row font-bold text-white">
-          <div style="flex: 1;">Team</div>
-          <div style="width: 60px;">Round 1</div>
-          <div style="width: 60px;">Round 2</div>
-          <div style="width: 60px;">Round 3</div>
-          <div style="width: 60px;">Round 4</div>
-          <div style="width: 60px;">Total</div>
+      <!-- Add Teams Section -->
+      <div id="addTeamsSection" class="mb-6">
+        <div class="actions-bar mb-4">
+          <h3 class="text-xl font-semibold text-white">Add Teams</h3>
+          <button onclick="addTeam()" class="add-btn"><i class="fas fa-plus mr-2"></i>Add Team</button>
         </div>
-      </div>
 
-      <div id="scoringForm">
-        <!-- Score rows will be populated dynamically -->
+        <div id="teamsList" class="mb-6">
+          <div class="team-input-row">
+            <input type="text" placeholder="Team Name" class="team-name">
+            <input type="text" placeholder="College" class="team-college">
+          </div>
+        </div>
+
+        <button onclick="finalizeTeams()" class="finalize-btn">Finalize Teams</button>
       </div>
     </div>
-  </div>
-  <!-- Add Teams Section -->
-<div id="addTeamsSection" class="mb-6">
-  <div class="actions-bar mb-4">
-    <h3 class="text-xl font-semibold text-white">Add Teams</h3>
-    <button onclick="addTeam()" class="add-btn"><i class="fas fa-plus mr-2"></i>Add Team</button>
-  </div>
-
-  <div id="teamsList" class="mb-6">
-    <div class="team-input-row">
-      <input type="text" placeholder="Team Name" class="team-name">
-      <input type="text" placeholder="College" class="team-college">
-    </div>
-  </div>
-
-  <button onclick="finalizeTeams()" class="finalize-btn">Finalize Teams</button>
-</div>
-</main>
+  </main>
 
   <footer class="text-center text-sm p-4 text-gray-400 bg-[#1f1b2e] mt-4 rounded-t-xl">
     &copy; 2025 Logic League. All rights reserved.
