@@ -4,7 +4,7 @@
     ".write": "auth != null",
     "teams": {
       ".read": true,
-      ".write": "auth != null || (!data.exists() && !newData.exists())"
+      ".write": "auth != null"
     }
   }
 }
