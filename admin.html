@@ -53,19 +53,22 @@
         </div>
       </div>
 
-      <div class="mb-4">
-        <div class="team-scores-row font-bold text-white">
-          <div style="flex: 1;">Team</div>
-          <div style="width: 60px;">Round 1</div>
-          <div style="width: 60px;">Round 2</div>
-          <div style="width: 60px;">Round 3</div>
-          <div style="width: 60px;">Round 4</div>
-          <div style="width: 60px;">Total</div>
-        </div>
-      </div>
-
-      <div id="scoringForm">
-        <!-- Score rows will be populated dynamically -->
+      <div class="scores-table-container">
+        <table class="scores-table">
+          <thead>
+            <tr>
+              <th style="text-align: left;">Team</th>
+              <th>Round 1</th>
+              <th>Round 2</th>
+              <th>Round 3</th>
+              <th>Round 4</th>
+              <th>Total</th>
+            </tr>
+          </thead>
+          <tbody id="scoringForm">
+            <!-- Score rows will be populated dynamically -->
+          </tbody>
+        </table>
       </div>
     </div>
   </div>
