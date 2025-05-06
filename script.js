@@ -264,6 +264,7 @@ function finalizeTeams() {
     });
 }
 
+
 // Generate scoring form based on saved teams - FIXED
 function generateScoringForm() {
   firebase.database().ref('teams').once('value')
@@ -281,7 +282,7 @@ function generateScoringForm() {
           
           // Create table cells
           row.innerHTML = `
-            <td style="text-align: left;">${team.name} (${team.college})</td>
+            <td style="text-align: left;">${team.name} <span class="text-gray-400">(${team.college})</span></td>
             <td><input type="number" data-team="${index}" data-round="0" value="${team.scores[0]}" min="0" class="score-input"></td>
             <td><input type="number" data-team="${index}" data-round="1" value="${team.scores[1]}" min="0" class="score-input"></td>
             <td><input type="number" data-team="${index}" data-round="2" value="${team.scores[2]}" min="0" class="score-input"></td>
