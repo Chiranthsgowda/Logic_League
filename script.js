@@ -271,10 +271,15 @@ function generateScoringForm() {
       if (snapshot.exists()) {
         const teams = snapshot.val();
         const scoringForm = document.getElementById('scoringForm');
+        
+        // Clear the form first
         scoringForm.innerHTML = '';
 
+        // Add each team as a table row
         teams.forEach((team, index) => {
           const row = document.createElement('tr');
+          
+          // Create table cells
           row.innerHTML = `
             <td style="text-align: left;">${team.name} (${team.college})</td>
             <td><input type="number" data-team="${index}" data-round="0" value="${team.scores[0]}" min="0" class="score-input"></td>
@@ -283,6 +288,7 @@ function generateScoringForm() {
             <td><input type="number" data-team="${index}" data-round="3" value="${team.scores[3]}" min="0" class="score-input"></td>
             <td class="total-score">${team.total}</td>
           `;
+          
           scoringForm.appendChild(row);
         });
 
@@ -291,6 +297,8 @@ function generateScoringForm() {
           input.addEventListener('change', updateScores);
           input.addEventListener('input', updateScores); // Also listen for input to update in real-time
         });
+      } else {
+        console.log("No teams found in the database");
       }
     })
     .catch((error) => {
@@ -329,12 +337,15 @@ function updateScores(event) {
         const totalScoreElement = row.querySelector('.total-score');
         totalScoreElement.textContent = total;
 
-        // Save the updated teams to Firebase
-        return firebase.database().ref('teams').set(teams);
+        // Update just this team's data in Firebase
+        return firebase.database().ref(`teams/${teamIndex}`).update({
+          scores: teams[teamIndex].scores,
+          total: total
+        });
       }
     })
     .then(() => {
-      console.log("Scores updated successfully");
+      console.log(`Score updated for team ${teamIndex}, round ${roundIndex}`);
     })
     .catch((error) => {
       console.error("Error updating scores:", error);
@@ -361,7 +372,7 @@ function saveScores() {
   const scoreInputs = document.querySelectorAll('.score-input');
   const scoreUpdates = [];
   
-  // Create an array of promises for batch updating
+  // Create an array of updates for batch processing
   scoreInputs.forEach(input => {
     const teamIndex = parseInt(input.dataset.team);
     const roundIndex = parseInt(input.dataset.round);
