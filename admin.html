@@ -43,33 +43,32 @@
     <h2 class="text-3xl font-bold glow mb-6 text-center text-white">Organizer Control Panel</h2>
 
     <!-- Scoring Section -->
-    <div id="scoringSection" style="display: none;" class="mb-6">
-      <div class="actions-bar mb-4">
-        <h3 class="text-xl font-semibold text-white">Update Scores</h3>
-        <div>
-          <button onclick="saveScores()" class="save-btn"><i class="fas fa-save mr-2"></i>Save Scores</button>
-          <button onclick="window.location.href='standings.html'" class="ml-2 view-standings-btn">View Standings</button>
-          <button onclick="window.location.href='team-management.html'" class="ml-2 danger-btn"><i class="fas fa-users-cog mr-2"></i>Manage Teams</button>
-        </div>
+  <div id="scoringSection" style="display: none;" class="mb-6">
+    <div class="actions-bar mb-4">
+      <h3 class="text-xl font-semibold text-white">Update Scores</h3>
+      <div>
+        <button onclick="saveScores()" class="save-btn"><i class="fas fa-save mr-2"></i>Save Scores</button>
+        <button onclick="window.location.href='standings.html'" class="ml-2 view-standings-btn">View Standings</button>
+        <button onclick="window.location.href='team-management.html'" class="ml-2 danger-btn"><i class="fas fa-users-cog mr-2"></i>Manage Teams</button>
       </div>
+    </div>
 
-      <div class="scores-table-container">
-        <table class="scores-table">
-          <thead>
-            <tr>
-              <th style="text-align: left;">Team</th>
-              <th>Round 1</th>
-              <th>Round 2</th>
-              <th>Round 3</th>
-              <th>Round 4</th>
-              <th>Total</th>
-            </tr>
-          </thead>
-          <tbody id="scoringForm">
-            <!-- Score rows will be populated dynamically -->
-          </tbody>
-        </table>
-      </div>
+    <div class="scores-table-container">
+      <table class="scores-table">
+        <thead>
+          <tr>
+            <th style="text-align: left;">Team</th>
+            <th>Round 1</th>
+            <th>Round 2</th>
+            <th>Round 3</th>
+            <th>Round 4</th>
+            <th>Total</th>
+          </tr>
+        </thead>
+        <tbody id="scoringForm">
+          <!-- Score rows will be populated dynamically -->
+        </tbody>
+      </table>
     </div>
   </div>
   <!-- Add Teams Section -->
